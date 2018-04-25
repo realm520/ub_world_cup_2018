@@ -45,3 +45,17 @@ class User(db.Model):
             'created_at': self.created_at,
             'updated_at': self.updated_at,
         }
+
+class EthAccount(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    address = db.Column(db.String(100), nullable=False)
+    encrypted_private_key = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
+    updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
+
+    def __init__(self, address, encrypted_private_key):
+        self.address = address
+        self.encrypted_private_key = encrypted_private_key
+
+    def __repr__(self):
+        return '<EthAccount %d' % self.id

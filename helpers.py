@@ -5,7 +5,39 @@ from functools import wraps
 import jwt
 import datetime
 import bcrypt
+import base64
+import random
+import hashlib
+import binascii
+import smtplib
+from email.mime.text import MIMEText
+from email.header import Header
+from Crypto import Random
+from Crypto.Cipher import AES
 from app import app
+import eth_account
+import config
+
+BS = 16
+pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
+unpad = lambda s: s[:-ord(s[len(s) - 1:])]
+
+class AESCipher:
+    # FIXME
+    def __init__( self, key ):
+        self.key = key
+
+    def encrypt( self, raw ):
+        raw = pad(raw).encode('utf8')
+        iv = Random.new().read( AES.block_size )
+        cipher = AES.new( self.key, AES.MODE_CBC, iv )
+        return base64.b64encode( iv + cipher.encrypt( raw ) )
+
+    def decrypt( self, enc ):
+        enc = base64.b64decode(enc)
+        iv = enc[:16]
+        cipher = AES.new(self.key, AES.MODE_CBC, iv )
+        return unpad(cipher.decrypt( enc[16:] )).decode('utf8')
 
 
 def allow_cross_domain(fun):
@@ -25,6 +57,34 @@ def allow_cross_domain(fun):
 def is_valid_blocklink_address(addr):
     # TODO
     return True
+
+
+def is_valid_email_format(email):
+    return True  # TODO
+
+
+def generate_eth_account():
+    return eth_account.Account.create()
+
+
+def encrypt_eth_privatekey(private_key, password):
+    # TODO
+    return private_key
+    # if len(password) < 16:
+    #     password = password + '0'*(16-len(password))
+    # encoder = AESCipher(password)
+    # enrypted = encoder.encrypt(private_key)
+    # return enrypted
+
+
+def decrypt_eth_privatekey(encrypted_private_key, password):
+    # TODO
+    return encrypted_private_key
+    # if len(password) < 16:
+    #     password = password + '0'*(16-len(password))
+    # encoder = AESCipher(password)
+    # decrypted = encoder.decrypt(encrypted_private_key)
+    # return decrypted
 
 
 def check_password_format(password):
@@ -74,3 +134,32 @@ def decode_auth_token(auth_token):
         return 'Signature expired. Please log in again.'
     except jwt.InvalidTokenError:
         return 'Invalid token. Please log in again.'
+
+
+def generate_captcha_code(n=6):
+    digits = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz'
+    ss = ''
+    for i in range(n):
+        idx = random.randint(0, len(digits)-1)
+        ss += digits[idx]
+    return ss
+
+
+def send_email(to_address, subject, content):
+    """send email task"""
+    # TODO: use celery to run this task async
+    receipent = [to_address]
+    try:
+        message = MIMEText(content, 'plain', 'utf-8')
+        message['From'] = config.SMTP_SENDER
+        print(to_address, subject, content)
+        message['To'] = to_address
+        message['Subject'] = subject
+
+        smtpObj = smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT)
+        smtpObj.login(config.SMTP_LOGIN, config.SMTP_PASSWORD)
+        smtpObj.sendmail(config.SMTP_SENDER, receipent, message.as_string())
+        return True
+    except smtplib.SMTPException as e:
+        print(e)
+        return False
