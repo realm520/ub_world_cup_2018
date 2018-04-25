@@ -1,0 +1,13 @@
+/venv
+/.idea
+/*.iml
+*.pyc
+/tmp
+/build
+/dist
+/out
+/log
+/logs
+/*.log
+*~
+/test.db
