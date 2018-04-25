@@ -11,3 +11,5 @@
 /*.log
 *~
 /test.db
+/dev.db
+/production.db

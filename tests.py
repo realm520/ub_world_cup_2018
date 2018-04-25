@@ -1,3 +1,4 @@
+# coding: utf8
 from __future__ import print_function
 import os
 import base64
@@ -15,11 +16,11 @@ print(res)
 print(base64.b64encode(res[0].getvalue()).decode('utf8'))
 
 
-helpers.send_email('zhouwei@blocklinker.com', '这是一个测试邮件', 'this is a test message 测试测试')
-exit(0)
+# helpers.send_email('zhouwei@blocklinker.com', '这是一个测试邮件', 'this is a test message 测试测试')
+# exit(0)
 
 email1 = 'test2@blocklink.com'
-registered_user = server.App.register(email1, '123456', None, None, '习', '大大', None, None, None, None)
+registered_user = server.App.register(email1, '123456', None, None, '习', '大大', 'test', 'test', 'test', 'test')
 print(registered_user)
 
 res = server.App.login(email1, '123456', 'abcd')

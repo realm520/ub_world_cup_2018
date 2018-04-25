@@ -1,3 +1,4 @@
+# coding: utf8
 from __future__ import print_function
 from flask import request
 import flask_jsonrpc
@@ -14,6 +15,7 @@ from email.mime.text import MIMEText
 from email.header import Header
 from Crypto import Random
 from Crypto.Cipher import AES
+import email_validator
 from app import app
 import eth_account
 import config
@@ -56,11 +58,21 @@ def allow_cross_domain(fun):
 
 def is_valid_blocklink_address(addr):
     # TODO
+    if addr is None or len(addr) < 20 or len(addr) > 40:
+        return False
     return True
 
 
 def is_valid_email_format(email):
-    return True  # TODO
+    if email is None or len(email) < 1:
+        return False
+    try:
+        v = email_validator.validate_email(email)
+        if email != v['email']:
+            return False
+        return True
+    except email_validator.EmailNotValidError as _:
+        return False
 
 
 def generate_eth_account():
@@ -147,18 +159,17 @@ def generate_captcha_code(n=6):
 
 def send_email(to_address, subject, content):
     """send email task"""
-    # TODO: use celery to run this task async
     receipent = [to_address]
     try:
         message = MIMEText(content, 'plain', 'utf-8')
-        message['From'] = config.SMTP_SENDER
+        message['From'] = app.config['SMTP_SENDER']
         print(to_address, subject, content)
         message['To'] = to_address
         message['Subject'] = subject
 
-        smtpObj = smtplib.SMTP(config.SMTP_HOST, config.SMTP_PORT)
-        smtpObj.login(config.SMTP_LOGIN, config.SMTP_PASSWORD)
-        smtpObj.sendmail(config.SMTP_SENDER, receipent, message.as_string())
+        smtpObj = smtplib.SMTP(app.config['SMTP_HOST'], app.config['SMTP_PORT'])
+        smtpObj.login(app.config['SMTP_LOGIN'], app.config['SMTP_PASSWORD'])
+        smtpObj.sendmail(app.config['SMTP_SENDER'], receipent, message.as_string())
         return True
     except smtplib.SMTPException as e:
         print(e)
