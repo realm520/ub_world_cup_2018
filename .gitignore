@@ -13,3 +13,5 @@
 /test.db
 /dev.db
 /production.db
+/*.pid
+/celerybeat-schedule.db

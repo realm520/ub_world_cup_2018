@@ -1,3 +1,4 @@
 #!/bin/bash
-export production=True
-celery -A app:celery worker -l info -f ./%I.log -B --detach
+# export production=True
+mkdir -p logs
+celery -A app:celery worker -l info --concurrency=4 -f ./logs/%I.log -B --detach

@@ -203,7 +203,7 @@ def reset_password(email, new_password, verify_code, key):
     return user.to_print_json()
 
 
-@jsonrpc.method('App.login(username=str,password=str,verify_code=str)')
+@jsonrpc.method('App.login(loginname=str,password=str,verify_code=str)')
 @allow_cross_domain
 def login(loginname, password, verify_code):
     if loginname is None or len(loginname) < 1:
