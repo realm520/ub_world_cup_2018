@@ -4,7 +4,7 @@ from flask_jsonrpc.proxy import ServiceProxy
 server = ServiceProxy('http://localhost:5000/api')
 
 email1 = 'test1@blocklink.com'
-registered_user = server.App.register(email1, '123456', None, None, None)
+registered_user = server.App.register(email1, '123456', None, None, '习', '大大', None)
 print(registered_user)
 
 res = server.App.login('test1@blocklink.com', '123456', 'abcd')

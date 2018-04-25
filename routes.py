@@ -1,5 +1,6 @@
 from __future__ import print_function
 from flask import request, session
+from flask_cors import CORS, cross_origin
 from app import app, db, jsonrpc
 from models import User
 import bcrypt
@@ -7,6 +8,8 @@ import helpers
 from helpers import allow_cross_domain
 from functools import wraps
 from datetime import datetime
+
+CORS(app)
 
 
 @app.route('/')
@@ -39,8 +42,9 @@ def check_auth(f):
     return _f
 
 
-@allow_cross_domain
+
 @jsonrpc.method('App.viewProfile()')
+@allow_cross_domain
 @check_auth
 def view_profile():
     """API to view current user profile"""
@@ -48,8 +52,8 @@ def view_profile():
     return user_json
 
 
-@allow_cross_domain
 @jsonrpc.method('App.changeBlocklinkAddress(address=str,verify_code=str)')
+@allow_cross_domain
 @check_auth
 def change_blocklink_address(address, verify_code):
     """TODO"""
@@ -67,29 +71,29 @@ def change_blocklink_address(address, verify_code):
     return user.to_print_json()
 
 
-@allow_cross_domain
 @jsonrpc.method('App.requestEmailVerifyCode(email=str)')
+@allow_cross_domain
 def request_email_verify_code(email):
     """TODO"""
     return True
 
 
-@allow_cross_domain
 @jsonrpc.method('App.requestPictureVerifyCode()')
+@allow_cross_domain
 def request_picture_verify_code():
     """TODO"""
     return "http://image.baidu.com/search/detail?ct=503316480&z=undefined&tn=baiduimagedetail&ipn=d&word=%E7%BE%8E%E5%9B%BE&step_word=&ie=utf-8&in=&cl=2&lm=-1&st=undefined&cs=2597352651,1038481775&os=1675601110,1384424370&simid=3454420665,391216152&pn=0&rn=1&di=141511965320&ln=1985&fr=&fmq=1524622650233_R&fm=&ic=undefined&s=undefined&se=&sme=&tab=0&width=undefined&height=undefined&face=undefined&is=0,0&istype=0&ist=&jit=&bdtype=0&spn=0&pi=0&gsm=0&objurl=http%3A%2F%2Ftupian.aladd.net%2F2015%2F9%2F1151.jpg&rpstart=0&rpnum=0&adpicid=0"
 
 
-@allow_cross_domain
 @jsonrpc.method('App.requestResetPassword(email=str)')
+@allow_cross_domain
 def request_reset_password(email):
     """TODO"""
     return True
 
 
-@allow_cross_domain
 @jsonrpc.method('App.resetPassword(email=str,new_password=str,verify_code=str)')
+@allow_cross_domain
 def reset_password(email, new_password, verify_code):
     user = User.query.filter_by(email=email).first()
     if user is None:
@@ -107,8 +111,8 @@ def reset_password(email, new_password, verify_code):
     return user.to_print_json()
 
 
-@allow_cross_domain
 @jsonrpc.method('App.login(username=str,password=str,verify_code=str)')
+@allow_cross_domain
 def login(loginname, password, verify_code):
     if loginname is None or len(loginname) < 1:
         raise Exception("loginname can't be empty")
@@ -126,9 +130,10 @@ def login(loginname, password, verify_code):
     return user_json
 
 
+@jsonrpc.method(
+    'App.register(email=str,password=str,blocklink_address=str,mobile=str,family_name=str,given_name=str,verify_code=str)')
 @allow_cross_domain
-@jsonrpc.method('App.register(email=str,password=str,blocklink_address=str,mobile=str,verify_code=str)')
-def register(email, password, blocklink_address, mobile, verify_code):
+def register(email, password, blocklink_address, mobile, family_name, given_name, verify_code):
     if email is None or len(email) < 1:
         raise Exception("email can't be empty")
     if password is None or len(password) < 6:
@@ -143,7 +148,7 @@ def register(email, password, blocklink_address, mobile, verify_code):
         raise Exception("blocklink address %s format error" % blocklink_address)
     password_crypted = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
     user = User(email=email, password=password_crypted, mobile=mobile, eth_address=None,
-                blocklink_address=blocklink_address)
+                blocklink_address=blocklink_address, family_name=family_name, given_name=given_name)
     db.session.add(user)
     db.session.commit()
     # TODO: generate eth address for user async. need save encrypted eth_address/private_keys to db and daily backup to private admin email

@@ -1,5 +1,6 @@
 from __future__ import print_function
-from flask import make_response
+from flask import request
+import flask_jsonrpc
 from functools import wraps
 import jwt
 import datetime
@@ -11,10 +12,10 @@ def allow_cross_domain(fun):
     @wraps(fun)
     def wrapper_fun(*args, **kwargs):
         res = fun(*args, **kwargs)
-        rst = make_response(res)
+        rst = flask_jsonrpc.make_response(res)
         rst.headers['Access-Control-Allow-Origin'] = '*'
-        rst.headers['Access-Control-Allow-Methods'] = 'PUT,GET,POST,DELETE'
-        allow_headers = "Referer,Accept,Origin,User-Agent"
+        rst.headers['Access-Control-Allow-Methods'] = 'PUT,GET,POST,DELETE,OPTIONS'
+        allow_headers = "Referer,Accept,Origin,User-Agent,Content-Type"
         rst.headers['Access-Control-Allow-Headers'] = allow_headers
         return rst
 
