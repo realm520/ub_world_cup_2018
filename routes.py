@@ -155,7 +155,8 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
         raise Exception("Can't find this deposit order")
     if order.review_state is not None:
         raise Exception("this deposit order processed before")
-    order_with_blocklink_trx_id = EthTokenDepositOrder.query.filter_by(blocklink_coin_sent_trx_id=blocklink_trx_id).first()
+    order_with_blocklink_trx_id = EthTokenDepositOrder.query.filter_by(
+        blocklink_coin_sent_trx_id=blocklink_trx_id).first()
     if order_with_blocklink_trx_id is not None:
         raise Exception("this blocklink transaction id used before in this service")
     if order.user_id is None:
@@ -163,7 +164,7 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
     user = User.query.get(order.user_id)
     if user is None:
         raise Exception("Can't find user %d" % order.user_id)
-    deposit_amount = Decimal(order.token_amount) / Decimal(10**order.token_precision)
+    deposit_amount = Decimal(order.token_amount) / Decimal(10 ** order.token_precision)
     if not helpers.is_blocklink_trx_amount_valid_for_deposit(blocklink_trx_id, user.blocklink_address, deposit_amount):
         raise Exception("this blocklink transaction's amount not enough")
     order.review_state = agree
@@ -314,6 +315,36 @@ def reset_password(email, new_password, verify_code, key):
         raise Exception("can't use old password")
     password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
     user.password = password_crypted
+    user.updated_at = datetime.utcnow()
+    db.session.add(user)
+    db.session.commit()
+    return user.to_print_json()
+
+
+@jsonrpc.method('App.updateProfile(email=str,new_password=str,blocklink_address=str,verify_code=str,key=str)')
+@allow_cross_domain
+def update_profile(email, new_password, blocklink_address, verify_code, key):
+    user = User.query.filter_by(email=email).first()
+    if user is None:
+        raise Exception("Can't find user %s" % email)
+    if app.config['NEED_CAPTCHA']:
+        code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
+        if code_info is None or pickle.loads(code_info)['code'] != verify_code:
+            raise Exception("invalid verify code")
+
+    if not helpers.check_password_format(new_password):
+        raise Exception("password format error")
+    if helpers.check_password(new_password, user.password):
+        raise Exception("can't use old password")
+    password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
+    user.password = password_crypted
+
+    if blocklink_address is not None and len(blocklink_address) > 0:
+        if not helpers.is_valid_blocklink_address(blocklink_address):
+            raise Exception("Invalid blocklink address format")
+        if user.blocklink_address != blocklink_address:
+            user.blocklink_address = blocklink_address
+
     user.updated_at = datetime.utcnow()
     db.session.add(user)
     db.session.commit()
