@@ -184,19 +184,11 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
     return order.to_dict()
 
 
-@jsonrpc.method('App.changeBlocklinkAddress(address=str,verify_code=str)')
+@jsonrpc.method('App.changeBlocklinkAddress(address=str)')
 @allow_cross_domain
 @check_auth
-def change_blocklink_address(address, verify_code):
+def change_blocklink_address(address):
     user_json = session['user']
-
-    token = request.headers.get(X_TOKEN_HEADER_KEY, None)
-    key = token
-    if app.config['NEED_CAPTCHA']:
-        info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, None)
-        if info is None or info['code'] != verify_code:
-            raise Exception('invalid verify code')
-
     if not helpers.is_valid_blocklink_address(address):
         raise Exception("Invalid blocklink address format")
     user = User.query.get(user_json['id'])
