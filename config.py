@@ -37,14 +37,16 @@ class DevelopmentConfig(Config):
     SMTP_PASSWORD = 'ZSsdlh12345'
 
     ETH_ENCRYPT_PASSWORD = '123456'
-    BLOCKLINK_ERC20_CONTRACT_ADDRESS = ''  # FIXME
+    BLOCKLINK_ERC20_CONTRACT_ADDRESS = '0xd850942ef8811f2a866692a623011bde52a462c1'  # FIXME: this is VEN address for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'dev.db')
+        "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_dev"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     # SQLALCHEMY_POOL_SIZE = 200
 
     NEED_CAPTCHA = False
+
+    ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
     CELERY_BROKER_URL = 'redis://localhost:6379/0'
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
@@ -68,12 +70,14 @@ class TestingConfig(Config):
     ETH_ENCRYPT_PASSWORD = '123456'
     BLOCKLINK_ERC20_CONTRACT_ADDRESS = ''  # FIXME
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              'sqlite:///' + os.path.join(basedir, 'test.db')
+                              "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_test"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     SQLALCHEMY_POOL_SIZE = 200
 
     NEED_CAPTCHA = False
+
+    ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
     CELERY_BROKER_URL = 'redis://localhost:6379/0'
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
@@ -96,12 +100,14 @@ class ProductionConfig(Config):
     ETH_ENCRYPT_PASSWORD = '12345ssdlh'
     BLOCKLINK_ERC20_CONTRACT_ADDRESS = ''  # FIXME
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              'sqlite:///' + os.path.join(basedir, 'production.db')  # FIXME
+                              "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_production"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     SQLALCHEMY_POOL_SIZE = 200
 
     NEED_CAPTCHA = True
+
+    ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
     CELERY_BROKER_URL = 'redis://localhost:6379/0'
     CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'

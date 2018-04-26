@@ -15,6 +15,8 @@ class User(db.Model):
     given_name = db.Column(db.String(10), nullable=True)
     eth_address = db.Column(db.String(100), nullable=True)
     blocklink_address = db.Column(db.String(100), nullable=True)
+    unpayed_balance = db.Column(db.String(100), nullable=False, default='0')
+    payed_balance = db.Column(db.String(100), nullable=False, default='0')
     disabled = db.Column(db.Boolean, default=False, nullable=False)
     is_admin = db.Column(db.Boolean, default=False, nullable=False)
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
@@ -45,6 +47,8 @@ class User(db.Model):
             'blocklink_address': self.blocklink_address,
             'family_name': self.family_name,
             'given_name': self.given_name,
+            'unpayed_balance': str(self.unpayed_balance),
+            'payed_balance': str(self.payed_balance),
             'disabled': self.disabled,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
@@ -70,9 +74,11 @@ class EthAccount(db.Model):
 class EthTokenDepositOrder(db.Model):
     __tablename__ = 'eth_token_deposit_order'
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=True)  # 充值时to_address对应的用户
     from_address = db.Column(db.String(100), nullable=False)
     to_address = db.Column(db.String(100), nullable=False)
-    token_amount = db.Column(db.DECIMAL, nullable=False)
+    token_amount = db.Column(db.String(100), nullable=False)
+    token_precision = db.Column(db.Integer, nullable=False)
     trx_id = db.Column(db.String(255), nullable=False)
     trx_time = db.Column(db.DateTime, nullable=False)
     token_symbol = db.Column(db.String(20), nullable=False)
@@ -82,22 +88,30 @@ class EthTokenDepositOrder(db.Model):
 
     blocklink_coin_sent = db.Column(db.Boolean, default=False, nullable=False)
     blocklink_coin_sent_trx_id = db.Column(db.String(100), nullable=True)
-    sent_blocklink_coin_admin_user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
-    sent_blocklink_coin_admin_user = db.relationship('User')
+    sent_blocklink_coin_admin_user_id = db.Column(db.Integer, nullable=True)
+    review_state = db.Column(db.Boolean, default=None, nullable=True)  # 审核状态, None: 未处理, False 审核失败, True: 审核通过
+    review_message = db.Column(db.Text, nullable=True)  # 审核备注消息
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
 
-    def __init__(self, from_address, to_address, token_amount, trx_id, trx_time, token_symbol, block_height, token_contract_address, trx_receipt_status):
+    def __init__(self, from_address, to_address, token_amount, token_precision, trx_id, trx_time, token_symbol, block_height, token_contract_address, trx_receipt_status, user_id):
         self.from_address = from_address
         self.to_address = to_address
         self.token_amount = token_amount
+        self.token_precision = token_precision
         self.trx_id = trx_id
         self.trx_time = trx_time
-        self.token_amount = token_symbol
+        self.token_symbol = token_symbol
         self.block_height = block_height
         self.token_contract_address = token_contract_address
         self.trx_receipt_status = trx_receipt_status
+        self.user_id = user_id
         self.blocklink_coin_sent = False
+        self.review_state = None
+        self.review_message = None
 
     def __repr__(self):
         return '<EthTokenDepositOrder %d>' % self.id
+
+    def to_dict(self):
+        return {c.name: getattr(self, c.name, None) for c in self.__table__.columns}

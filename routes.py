@@ -3,7 +3,7 @@ from __future__ import print_function
 from flask import request, session
 from flask_cors import CORS, cross_origin
 from app import app, db, jsonrpc, redis_store
-from models import User, EthAccount
+from models import User, EthAccount, EthTokenDepositOrder
 import bcrypt
 import helpers
 import uuid
@@ -35,7 +35,7 @@ def hello_world():
 X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
-# TODO: query_order_history, admin, mark-order-sended api, error codes
+# TODO: query_order_history, admin, mark-order-sended api, error codes, sweep tokens to offline wallet
 
 def check_auth(f):
     @wraps(f)
@@ -66,7 +66,40 @@ def check_auth(f):
 def view_profile():
     """API to view current user profile"""
     user_json = session['user']
+    user = User.query.get(user_json['id'])
+    user_json = user.to_print_json()
+    session['user'] = user_json
     return user_json
+
+
+@jsonrpc.method('App.myDepositHistory(offset=int,limit=int,review_state=bool,all=bool)')
+@allow_cross_domain
+@check_auth
+def query_my_deposit_history(offset, limit, review_state, all):
+    """查询当前用户的充值流水"""
+    if offset is None or offset < 0:
+        offset = 0
+    if limit is None or limit < 1:
+        limit = 20
+    if all is None:
+        all = True
+    user_json = session['user']
+    user = User.query.get(user_json['id'])
+    q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
+    if not all:
+        q = q.filter_by(review_state=review_state)
+    orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
+    order_dicts = [order.to_dict() for order in orders]
+    q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
+    if not all:
+        q = q.filter_by(review_state=review_state)
+    total = q.count()
+    return {
+        'items': order_dicts,
+        'offset': offset,
+        'limit': limit,
+        'total': total,
+    }
 
 
 @jsonrpc.method('App.changeBlocklinkAddress(address=str,verify_code=str)')
@@ -79,7 +112,7 @@ def change_blocklink_address(address, verify_code):
     key = token
     if app.config['NEED_CAPTCHA']:
         info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, None)
-        if info is None or info['code'] is not verify_code:
+        if info is None or info['code'] != verify_code:
             raise Exception('invalid verify code')
 
     if not helpers.is_valid_blocklink_address(address):
@@ -94,9 +127,13 @@ def change_blocklink_address(address, verify_code):
     return user.to_print_json()
 
 
-@jsonrpc.method('App.requestEmailVerifyCode(email=str)')
+@jsonrpc.method('App.requestRegisterEmailVerifyCode(email=str,picture_code_key=str,picture_verify_code=str)')
 @allow_cross_domain
-def request_email_verify_code(email):
+def request_register_email_verify_code(email, picture_code_key, picture_verify_code):
+    if app.config['NEED_CAPTCHA']:
+        picture_code_info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + picture_code_key)
+        if picture_code_info is None or pickle.loads(picture_code_info)['code'] != picture_verify_code:
+            raise Exception("invalid picture verify code")
     token = request.headers.get(X_TOKEN_HEADER_KEY, None)
     if token is None or len(token) < 1:
         key = str(uuid.uuid4())
@@ -153,9 +190,15 @@ def verify_picture_code(key, code):
         if info is None:
             return False
         info = pickle.loads(info)
-        if info['code'] is not code:
+        if info['code'] != code:
             return False
     return True
+
+
+@jsonrpc.method('App.verifyBlocklinkAddressFormat(address=str)')
+@allow_cross_domain
+def verify_blocklink_address_format(address):
+    return helpers.is_valid_blocklink_address(address)
 
 
 @jsonrpc.method('App.requestResetPassword(email=str)')
@@ -188,7 +231,7 @@ def reset_password(email, new_password, verify_code, key):
         raise Exception("Can't find user %s" % email)
     if app.config['NEED_CAPTCHA']:
         code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
-        if code_info is None or pickle.loads(code_info)['code'] is not verify_code:
+        if code_info is None or pickle.loads(code_info)['code'] != verify_code:
             raise Exception("invalid verify code")
 
     if not helpers.check_password_format(new_password):
@@ -223,10 +266,9 @@ def login(loginname, password, verify_code):
 
 
 @jsonrpc.method(
-    'App.register(email=str,password=str,blocklink_address=str,mobile=str,family_name=str,given_name=str,email_verify_code=str,picture_verify_code=str,email_code_key=str,picture_code_key=str)')
+    'App.register(email=str,password=str,blocklink_address=str,mobile=str,family_name=str,given_name=str,email_verify_code=str,email_code_key=str)')
 @allow_cross_domain
-def register(email, password, blocklink_address, mobile, family_name, given_name, email_verify_code,
-             picture_verify_code, email_code_key, picture_code_key):
+def register(email, password, blocklink_address, mobile, family_name, given_name, email_verify_code, email_code_key):
     if not helpers.is_valid_email_format(email):
         raise Exception("invalid email format")
     if email is None or len(email) < 1:
@@ -241,25 +283,20 @@ def register(email, password, blocklink_address, mobile, family_name, given_name
 
     if app.config['NEED_CAPTCHA']:
         email_code_info = redis_store.get(EMAIL_VERIFY_CODE_CACHE_KEY_PREFIX + email_code_key)
-        if email_code_info is None or pickle.loads(email_code_info)['code'] is not email_verify_code:
+        if email_code_info is None or pickle.loads(email_code_info)['code'] != email_verify_code:
             raise Exception("invalid email verify code")
-        picture_code_info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + email_code_key)
-        if picture_code_info is None or pickle.loads(picture_code_info)['code'] is not picture_verify_code:
-            raise Exception("invalid picture verify code")
 
-    if not helpers.is_valid_blocklink_address(blocklink_address):
+    if blocklink_address is not None and not helpers.is_valid_blocklink_address(blocklink_address):
         raise Exception("blocklink address %s format error" % blocklink_address)
     eth_account = helpers.generate_eth_account()
     encrypt_password = app.config['ETH_ENCRYPT_PASSWORD']
     password_crypted = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
     user = User(email=email, password=password_crypted, mobile=mobile, eth_address=None,
                 blocklink_address=blocklink_address, family_name=family_name, given_name=given_name)
-    user.eth_address = eth_account.address
+    user.eth_address = eth_account.address.lower()
     db.session.add(user)
-    account = EthAccount(eth_account.address,
+    account = EthAccount(eth_account.address.lower(),
                          helpers.encrypt_eth_privatekey(eth_account.privateKey.hex(), encrypt_password))
-    print(eth_account.address, eth_account.privateKey.hex(),
-          helpers.decrypt_eth_privatekey(account.encrypted_private_key, encrypt_password))
     assert helpers.decrypt_eth_privatekey(account.encrypted_private_key,
                                           encrypt_password) == eth_account.privateKey.hex()
     db.session.add(account)
