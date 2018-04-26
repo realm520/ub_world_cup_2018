@@ -50,6 +50,7 @@ class User(db.Model):
             'unpayed_balance': str(self.unpayed_balance),
             'payed_balance': str(self.payed_balance),
             'disabled': self.disabled,
+            'is_admin': self.is_admin,
             'created_at': self.created_at,
             'updated_at': self.updated_at,
         }

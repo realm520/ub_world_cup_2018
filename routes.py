@@ -10,6 +10,7 @@ import uuid
 import base64
 import json
 import pickle
+from decimal import Decimal
 from helpers import allow_cross_domain
 from functools import wraps
 from datetime import datetime
@@ -35,7 +36,7 @@ def hello_world():
 X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
-# TODO: query_order_history, admin, mark-order-sended api, error codes, sweep tokens to offline wallet
+# TODO: error codes, sweep tokens to offline wallet, backup, 对账
 
 def check_auth(f):
     @wraps(f)
@@ -100,6 +101,87 @@ def query_my_deposit_history(offset, limit, review_state, all):
         'limit': limit,
         'total': total,
     }
+
+
+@jsonrpc.method('App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=bool,all=bool)')
+@allow_cross_domain
+@check_auth
+def query_users_deposit_history(user_id, offset, limit, review_state, all):
+    """管理员查询所有用户的充值流水"""
+    if offset is None or offset < 0:
+        offset = 0
+    if limit is None or limit < 1:
+        limit = 20
+    if all is None:
+        all = True
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    q = EthTokenDepositOrder.query
+    if user_id is not None:
+        q = q.filter_by(user_id=user_id)
+    if not all:
+        q = q.filter_by(review_state=review_state)
+    orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
+    order_dicts = [order.to_dict() for order in orders]
+    q = EthTokenDepositOrder.query
+    if user_id is not None:
+        q = q.filter_by(user_id=user_id)
+    if not all:
+        q = q.filter_by(review_state=review_state)
+    total = q.count()
+    return {
+        'items': order_dicts,
+        'offset': offset,
+        'limit': limit,
+        'total': total,
+    }
+
+
+@jsonrpc.method('App.processDepositOrder(order_id=int,agree=bool,memo=str,blocklink_trx_id=str)')
+@allow_cross_domain
+@check_auth
+def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
+    """管理员处理充值流水的代币兑换"""
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    if agree is None:
+        raise Exception("please agree or disagree")
+    if not helpers.is_valid_blocklink_trx_id(blocklink_trx_id):
+        raise Exception("invalid blocklink transaction id")
+    order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
+    if order is None:
+        raise Exception("Can't find this deposit order")
+    if order.review_state is not None:
+        raise Exception("this deposit order processed before")
+    order_with_blocklink_trx_id = EthTokenDepositOrder.query.filter_by(blocklink_coin_sent_trx_id=blocklink_trx_id).first()
+    if order_with_blocklink_trx_id is not None:
+        raise Exception("this blocklink transaction id used before in this service")
+    if order.user_id is None:
+        raise Exception("this deposit order not refer to a user")
+    user = User.query.get(order.user_id)
+    if user is None:
+        raise Exception("Can't find user %d" % order.user_id)
+    deposit_amount = Decimal(order.token_amount) / Decimal(10**order.token_precision)
+    if not helpers.is_blocklink_trx_amount_valid_for_deposit(blocklink_trx_id, user.blocklink_address, deposit_amount):
+        raise Exception("this blocklink transaction's amount not enough")
+    order.review_state = agree
+    order.review_message = memo
+
+    if agree:
+        order.sent_blocklink_coin_admin_user_id = cur_user.id
+        order.blocklink_coin_sent_trx_id = blocklink_trx_id
+        order.blocklink_coin_sent = True
+        user.payed_balance = str(Decimal(user.payed_balance) + deposit_amount)
+        user.unpayed_balance = str(Decimal(user.unpayed_balance) - deposit_amount)
+        user.updated_at = datetime.utcnow()
+
+    order.updated_at = datetime.utcnow()
+
+    db.session.add(order)
+    db.session.commit()
+    return order.to_dict()
 
 
 @jsonrpc.method('App.changeBlocklinkAddress(address=str,verify_code=str)')
@@ -253,6 +335,8 @@ def login(loginname, password, verify_code):
         raise Exception("loginname can't be empty")
     # TODO; picture verify code check if this session request too many times
     user = User.query.filter_by(email=loginname).first()
+    if user is None:
+        raise Exception("user not found")
     if password is None or len(password) < 1:
         raise Exception("password can't be empty")
     if not helpers.check_password(password.encode('utf8'), user.password):

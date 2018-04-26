@@ -1,0 +1,23 @@
+version: '3'
+services:
+  ubcd1:
+    image: blocklinkbackend
+    ports:
+    - "5000:5000"
+    volumes:
+    - .:/code
+    - logvolume01:/var/log
+    command: "-w 4 -b 127.0.0.1:8080 app:app"
+    entrypoint:
+    - gunicorn
+  ubcd2:
+    image: blocklinkbackend
+    ports:
+    volumes:
+    - .:/code
+    - logvolume02:/var/log
+    command: "-A app:celery worker -l info --concurrency=4 -f ./logs/%I.log -B --detach"
+    entrypoint:
+    - celery
+volumes:
+  logvolume01: {}

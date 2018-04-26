@@ -24,22 +24,23 @@ BS = 16
 pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
 unpad = lambda s: s[:-ord(s[len(s) - 1:])]
 
+
 class AESCipher:
     # FIXME
-    def __init__( self, key ):
+    def __init__(self, key):
         self.key = key
 
-    def encrypt( self, raw ):
+    def encrypt(self, raw):
         raw = pad(raw).encode('utf8')
-        iv = Random.new().read( AES.block_size )
-        cipher = AES.new( self.key, AES.MODE_CBC, iv )
-        return base64.b64encode( iv + cipher.encrypt( raw ) )
+        iv = Random.new().read(AES.block_size)
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(iv + cipher.encrypt(raw))
 
-    def decrypt( self, enc ):
+    def decrypt(self, enc):
         enc = base64.b64decode(enc)
         iv = enc[:16]
-        cipher = AES.new(self.key, AES.MODE_CBC, iv )
-        return unpad(cipher.decrypt( enc[16:] )).decode('utf8')
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return unpad(cipher.decrypt(enc[16:])).decode('utf8')
 
 
 def allow_cross_domain(fun):
@@ -61,6 +62,18 @@ def is_valid_blocklink_address(addr):
     if addr is None or len(addr) < 20 or len(addr) > 40:
         return False
     return True
+
+
+def is_valid_blocklink_trx_id(trx_id):
+    # TODO
+    if trx_id is None or len(trx_id) < 20 or len(trx_id) > 60:
+        return False
+    return True
+
+
+def is_blocklink_trx_amount_valid_for_deposit(trx_id, to_address, amount):
+    """判断blocklink链上交易id是否是转给to_address地址并且金额不少于amount * 0.99, amount type is Decimal"""
+    return True  # TODO: 去blocklink链上或者区块浏览器中查找
 
 
 def is_valid_email_format(email):
@@ -152,7 +165,7 @@ def generate_captcha_code(n=6):
     digits = '0123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjklmnpqrstuvwxyz'
     ss = ''
     for i in range(n):
-        idx = random.randint(0, len(digits)-1)
+        idx = random.randint(0, len(digits) - 1)
         ss += digits[idx]
     return ss
 

@@ -50,6 +50,8 @@ def get_eth_latest_block_height():
     return int(res['result'], 16)
 
 
+# TODO: 需要一个后台任务查账检查user的balance和充值流水是否一致(eth_address没变的情况下)
+
 
 def direct_crawl_eth_token_deposits():
     addresses = get_eth_token_deposit_address()
@@ -111,7 +113,6 @@ def direct_crawl_eth_token_deposits():
                     if user is not None:
                         user.unpayed_balance = str(Decimal(user.unpayed_balance) + (Decimal(tx_value) / Decimal(10**tx_token_decimal)))
                         db.session.add(user)
-                    # TODO: 需要一个后台任务查账检查user的balance和充值流水是否一致(eth_address没变的情况下)
                     logger.info("eth token tx crawled: %s" % tx)
                 db.session.commit()
         except Exception as e:
