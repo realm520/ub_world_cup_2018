@@ -104,6 +104,21 @@ def query_my_deposit_history(offset, limit, review_state, all):
     }
 
 
+@jsonrpc.method('App.allUsersSumUnpayedBalances()')
+@allow_cross_domain
+@check_auth
+def query_all_users_sum_unpayed_balances():
+    """管理员查询所有用户的总的未支付余额"""
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    users = User.query.all()
+    sum = Decimal(0)
+    for user in users:
+        sum += Decimal(user.unpayed_balance)
+    return str(sum)
+
+
 @jsonrpc.method('App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=bool,all=bool)')
 @allow_cross_domain
 @check_auth
