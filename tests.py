@@ -73,3 +73,6 @@ print(res)
 
 res = server.App.myDepositHistory(None, None, None, True)
 print(res)
+
+res = server.App.usersDepositHistory(None, None, None, None, None, None, None, email1)
+print(res)

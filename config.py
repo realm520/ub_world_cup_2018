@@ -16,6 +16,9 @@ from datetime import timedelta
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 
+ALLOWED_CROSS_ORIGIN_HEADERS = "Referer,Accept,Origin,User-Agent,Content-Type,X-TOKEN"
+
+
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(24)
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True

@@ -31,7 +31,7 @@ def options_api():
     rst = make_response('')
     rst.headers['Access-Control-Allow-Origin'] = '*'
     rst.headers['Access-Control-Allow-Methods'] = 'PUT,GET,POST,DELETE,OPTIONS'
-    allow_headers = "Referer,Accept,Origin,User-Agent,Content-Type,X-TOKEN"
+    allow_headers = config.ALLOWED_CROSS_ORIGIN_HEADERS
     rst.headers['Access-Control-Allow-Headers'] = allow_headers
     return rst
 

@@ -15,6 +15,7 @@ from decimal import Decimal
 from helpers import allow_cross_domain
 from functools import wraps
 from datetime import datetime
+from sqlalchemy import or_
 import captcha_helpers
 import celery_task
 from logging_config import logger
@@ -47,6 +48,7 @@ def check_auth(f):
                 return f(*args, **kwargs)
             token = request.headers.get(X_TOKEN_HEADER_KEY, None)
             if token is None or len(token) < 1:
+                logger.error("auth token not found: %s" % str(request.headers))
                 raise Exception("auth token not found")
             user_id = helpers.decode_auth_token(token)
             user = User.query.get(user_id)
@@ -119,32 +121,54 @@ def query_all_users_sum_unpayed_balances():
     return str(sum)
 
 
-@jsonrpc.method('App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=bool,all=bool)')
+@jsonrpc.method('App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=int,amount_min=str,amount_max=str,min_timestamp=int,keyword=str)')
 @allow_cross_domain
 @check_auth
-def query_users_deposit_history(user_id, offset, limit, review_state, all):
-    """管理员查询所有用户的充值流水"""
+def query_users_deposit_history(user_id, offset, limit, review_state, amount_min, amount_max, min_timestamp, keyword):
+    """
+    管理员查询所有用户的充值流水
+    :param user_id: 用户id
+    :param offset: 0-based偏移量
+    :param limit: 取的记录的数量
+    :param review_state: null/0表示不筛选，1表示审核中，2表示兑换成功，3表示拒绝请求
+    :param amount_min: 最小金额
+    :param amount_max: 最大金额
+    :param min_timestamp: 发起的最小时间戳（秒数）
+    :param keyword 搜索关键字，用户名或充值地址
+    :return:
+    """
     if offset is None or offset < 0:
         offset = 0
     if limit is None or limit < 1:
         limit = 20
-    if all is None:
-        all = True
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
         raise Exception("only admin user can visit this api")
-    q = EthTokenDepositOrder.query
-    if user_id is not None:
-        q = q.filter_by(user_id=user_id)
-    if not all:
-        q = q.filter_by(review_state=review_state)
+    def make_query(keyword):
+        q = EthTokenDepositOrder.query
+        if user_id is not None:
+            q = q.filter_by(user_id=user_id)
+        if review_state == 1:
+            q = q.filter_by(review_state=None)
+        elif review_state == 2:
+            q = q.filter_by(review_state=True)
+        elif review_state == 3:
+            q = q.filter_by(review_state=False)
+        else:
+            if review_state != 0 and review_state is not None:
+                raise Exception("invalid review_state params")
+        # TODO: 金额筛选
+        if min_timestamp is not None:
+            q = q.filter(EthTokenDepositOrder.created_at >= datetime.utcfromtimestamp(min_timestamp))
+        if keyword is not None and len(keyword.strip()) > 0:
+            keyword = keyword.strip()
+            q = q.join(User, User.id == EthTokenDepositOrder.user_id)
+            q = q.filter(or_(User.eth_address == keyword, User.email==keyword))
+        return q
+    q = make_query(keyword)
     orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
     order_dicts = [order.to_dict() for order in orders]
-    q = EthTokenDepositOrder.query
-    if user_id is not None:
-        q = q.filter_by(user_id=user_id)
-    if not all:
-        q = q.filter_by(review_state=review_state)
+    q = make_query(keyword)
     total = q.count()
     return {
         'items': order_dicts,
