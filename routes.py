@@ -48,6 +48,8 @@ def check_auth(f):
                 return f(*args, **kwargs)
             token = request.headers.get(X_TOKEN_HEADER_KEY, None)
             if token is None or len(token) < 1:
+                if session['user'] is not None:
+                    return f(*args, **kwargs)
                 logger.error("auth token not found: %s" % str(request.headers))
                 raise Exception("auth token not found")
             user_id = helpers.decode_auth_token(token)
@@ -423,6 +425,7 @@ def reset_password(email, new_password, verify_code, key):
 
 @jsonrpc.method('App.updateProfile(email=str,new_password=str,blocklink_address=str,verify_code=str,key=str)')
 @allow_cross_domain
+@check_auth
 def update_profile(email, new_password, blocklink_address, verify_code, key):
     user = User.query.filter_by(email=email).first()
     if user is None:
@@ -449,6 +452,16 @@ def update_profile(email, new_password, blocklink_address, verify_code, key):
     db.session.add(user)
     db.session.commit()
     return user.to_print_json()
+
+
+@jsonrpc.method('App.logout()')
+@allow_cross_domain
+@check_auth
+def logout():
+    """注销退出"""
+    session['user'] = None
+    session['user_id'] = None
+    return True
 
 
 @jsonrpc.method('App.login(loginname=str,password=str,verify_code=str)')
