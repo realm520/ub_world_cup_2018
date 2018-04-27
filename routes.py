@@ -48,8 +48,6 @@ def check_auth(f):
                 return f(*args, **kwargs)
             token = request.headers.get(X_TOKEN_HEADER_KEY, None)
             if token is None or len(token) < 1:
-                if session['user'] is not None:
-                    return f(*args, **kwargs)
                 logger.error("auth token not found: %s" % str(request.headers))
                 raise Exception("auth token not found")
             user_id = helpers.decode_auth_token(token)
