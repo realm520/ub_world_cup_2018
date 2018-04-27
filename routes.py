@@ -10,6 +10,7 @@ import uuid
 import base64
 import json
 import pickle
+import time
 from decimal import Decimal
 from helpers import allow_cross_domain
 from functools import wraps
@@ -138,10 +139,68 @@ def query_users_deposit_history(user_id, offset, limit, review_state, all):
     }
 
 
-@jsonrpc.method('App.processDepositOrder(order_id=int,agree=bool,memo=str,blocklink_trx_id=str)')
+@jsonrpc.method('App.lockDepositOrder(order_id=int)')
 @allow_cross_domain
 @check_auth
-def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
+def lock_deposit_order(order_id):
+    """管理员锁定某个充值流水，避免两个管理员都去做这个充值流水的转账操作"""
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
+    if order is None:
+        raise Exception("Can't find this deposit order")
+    if order.review_state is not None:
+        raise Exception("this deposit order processed before")
+    if order.review_lock_by_user_id is not None:
+        raise Exception("this deposit order locked by other user")
+    order.review_lock_by_user_id = cur_user.id
+    order.updated_at = datetime.utcnow()
+    db.session.add(order)
+    db.session.commit()
+    return order.to_dict()
+
+
+@jsonrpc.method('App.unlockDepositOrder(order_id=int)')
+@allow_cross_domain
+@check_auth
+def unlock_deposit_order(order_id):
+    """管理员解锁某个充值流水，从而此充值流水可以被再次锁定"""
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
+    if order is None:
+        raise Exception("Can't find this deposit order")
+    if order.review_state is not None:
+        raise Exception("this deposit order processed before")
+    if order.review_lock_by_user_id is None:
+        raise Exception("this deposit order not locked before")
+    order.review_lock_by_user_id = None
+    order.updated_at = datetime.utcnow()
+    db.session.add(order)
+    db.session.commit()
+    return order.to_dict()
+
+
+@jsonrpc.method('App.getOrder(order_id=int)')
+@allow_cross_domain
+@check_auth
+def get_order_info(order_id):
+    """管理员获取某个充值流水的信息"""
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise Exception("only admin user can visit this api")
+    order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
+    if order is None:
+        raise Exception("Can't find this deposit order")
+    return order.to_dict()
+
+
+@jsonrpc.method('App.processDepositOrder(order_id=int,agree=bool,memo=str,blocklink_trx_id=str,updated_at=int)')
+@allow_cross_domain
+@check_auth
+def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
     """管理员处理充值流水的代币兑换"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
@@ -155,6 +214,8 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id):
         raise Exception("Can't find this deposit order")
     if order.review_state is not None:
         raise Exception("this deposit order processed before")
+    if updated_at is None or updated_at < time.mktime(order.updated_at.utctimetuple()):
+        raise Exception("your order data is too old, please refresh it")
     order_with_blocklink_trx_id = EthTokenDepositOrder.query.filter_by(
         blocklink_coin_sent_trx_id=blocklink_trx_id).first()
     if order_with_blocklink_trx_id is not None:

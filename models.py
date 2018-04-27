@@ -3,6 +3,7 @@ from __future__ import print_function
 from app import db
 from datetime import datetime
 from sqlalchemy.sql import func
+import time
 
 
 class User(db.Model):
@@ -51,8 +52,8 @@ class User(db.Model):
             'payed_balance': str(self.payed_balance),
             'disabled': self.disabled,
             'is_admin': self.is_admin,
-            'created_at': self.created_at,
-            'updated_at': self.updated_at,
+            'created_at': time.mktime(self.created_at.utctimetuple()),
+            'updated_at': time.mktime(self.updated_at.utctimetuple()),
         }
 
 
@@ -90,6 +91,7 @@ class EthTokenDepositOrder(db.Model):
     blocklink_coin_sent = db.Column(db.Boolean, default=False, nullable=False)
     blocklink_coin_sent_trx_id = db.Column(db.String(100), nullable=True)
     sent_blocklink_coin_admin_user_id = db.Column(db.Integer, nullable=True)
+    review_lock_by_user_id = db.Column(db.Integer, nullable=True)  # 被某个审核人员锁定的审核人员用户id
     review_state = db.Column(db.Boolean, default=None, nullable=True)  # 审核状态, None: 未处理, False 审核失败, True: 审核通过
     review_message = db.Column(db.Text, nullable=True)  # 审核备注消息
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
@@ -115,4 +117,7 @@ class EthTokenDepositOrder(db.Model):
         return '<EthTokenDepositOrder %d>' % self.id
 
     def to_dict(self):
-        return {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
+        d = {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
+        d['created_at'] = time.mktime(self.created_at.utctimetuple())
+        d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
+        return d

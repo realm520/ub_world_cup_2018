@@ -44,7 +44,7 @@ class DevelopmentConfig(Config):
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     # SQLALCHEMY_POOL_SIZE = 200
 
-    NEED_CAPTCHA = False
+    NEED_CAPTCHA = True
 
     ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
@@ -68,9 +68,9 @@ class TestingConfig(Config):
     SMTP_PASSWORD = 'ZSsdlh12345'
 
     ETH_ENCRYPT_PASSWORD = '123456'
-    BLOCKLINK_ERC20_CONTRACT_ADDRESS = ''  # FIXME
+    BLOCKLINK_ERC20_CONTRACT_ADDRESS = '0xd850942ef8811f2a866692a623011bde52a462c1'  # FIXME: this is VEN address for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_test"
+                              "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_dev"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     SQLALCHEMY_POOL_SIZE = 200
