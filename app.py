@@ -21,7 +21,7 @@ print('current config model is %s' % config_model)
 app = Flask(__name__)
 app.config.from_object(config.config[config_model])
 
-REDIS_URL = "redis://:@localhost:6379/0"
+REDIS_URL = "redis://:@%s:6379/0" % os.getenv('RHOST', 'localhost')
 redis_store = FlaskRedis(app)
 
 

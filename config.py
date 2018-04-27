@@ -48,8 +48,8 @@ class DevelopmentConfig(Config):
 
     ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+    CELERY_BROKER_URL = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
+    CELERY_RESULT_BACKEND = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
     CELERY_TIMEZONE = 'Asia/Shanghai'  # set timezone in here
     CELERYBEAT_SCHEDULE = {
         'every-one-minute': {
@@ -79,8 +79,8 @@ class TestingConfig(Config):
 
     ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+    CELERY_BROKER_URL = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
+    CELERY_RESULT_BACKEND = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
     CELERY_TIMEZONE = 'Asia/Shanghai'  # set timezone in here
     CELERYBEAT_SCHEDULE = {
         'every-one-minute': {
@@ -109,8 +109,8 @@ class ProductionConfig(Config):
 
     ETHERSCAN_API_KEY = 'QQGM9I82DH2H9M7J8J21FHADIFBIDFQHWE'
 
-    CELERY_BROKER_URL = 'redis://localhost:6379/0'
-    CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+    CELERY_BROKER_URL = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
+    CELERY_RESULT_BACKEND = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
     CELERY_TIMEZONE = 'Asia/Shanghai'  # set timezone in here
     CELERYBEAT_SCHEDULE = {
         'every-one-minute': {

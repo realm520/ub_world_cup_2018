@@ -1,13 +1,27 @@
 version: '3'
 services:
+  redis:
+    image: redis
+    networks:
+    - redis-net
+    command: ["redis-server", "--appendonly", "yes"]
+    hostname: redis
   web:
     image: blocklinkbackend
     ports:
     - "5000:5000"
+    environment:
+    - RHOST=redis
     volumes:
     - .:/code
     - logvolume01:/var/log
     working_dir: /code
+    depends_on:
+    - redis
+    links:
+    - redis
+    networks:
+    - redis-net
     command: "-w 4 -b 0.0.0.0:5000 app:app"
     entrypoint:
     - gunicorn
@@ -17,9 +31,19 @@ services:
     - .:/code
     - logvolume02:/var/log
     working_dir: /code
+    environment:
+    - RHOST=redis
+    depends_on:
+    - redis
+    links:
+    - redis
+    networks:
+    - redis-net
     command: "-A app:celery worker -l info --concurrency=4 -f ./logs/%I.log -B"
     entrypoint:
     - celery
 volumes:
   logvolume01: {}
   logvolume02: {}
+networks:
+  redis-net:
