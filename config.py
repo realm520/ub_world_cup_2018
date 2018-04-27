@@ -20,7 +20,7 @@ ALLOWED_CROSS_ORIGIN_HEADERS = "Referer,Accept,Origin,User-Agent,Content-Type,X-
 
 
 class Config:
-    SECRET_KEY = os.environ.get('SECRET_KEY') or os.urandom(24)
+    SECRET_KEY = os.environ.get('SECRET_KEY') or b'\x97d\x08\x9f\xa9Lj\x9bke\xf9\xdc.\xc3B8\xae\xc3\x196\xb4gvR'
     SQLALCHEMY_COMMIT_ON_TEARDOWN = True
     FLASKY_MAIL_SUBJECT_PREFIX = ''
     FLASKY_MAIL_SENDER = ''
