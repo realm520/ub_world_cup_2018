@@ -107,7 +107,8 @@ def direct_crawl_eth_token_deposits():
                     user = db.session.query(User).filter_by(eth_address=address).first()
                     deposit_tx = EthTokenDepositOrder(from_addr, to_addr, str(tx_value), tx_token_decimal, tx_hash, tx_timestamp,
                                                       tx_token_symbol, tx_block_number, tx_contract_addr, 'SUCCESS',
-                                                      user_id=user.id if user else None)
+                                                      user_id=user.id if user else None,
+                                                      simple_token_amount = Decimal(tx_value) / Decimal(10**tx_token_decimal))
                     db.session.add(deposit_tx)
                     # add unpayed_balance to user
                     if user is not None:

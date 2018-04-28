@@ -81,6 +81,7 @@ class EthTokenDepositOrder(db.Model):
     to_address = db.Column(db.String(100), nullable=False)
     token_amount = db.Column(db.String(100), nullable=False)
     token_precision = db.Column(db.Integer, nullable=False)
+    simple_token_amount = db.Column(db.DECIMAL(precision=18), nullable=False)  # 除精度后的token数额, 用来方便筛选查询
     trx_id = db.Column(db.String(255), nullable=False)
     trx_time = db.Column(db.DateTime, nullable=False)
     token_symbol = db.Column(db.String(20), nullable=False)
@@ -97,7 +98,7 @@ class EthTokenDepositOrder(db.Model):
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
 
-    def __init__(self, from_address, to_address, token_amount, token_precision, trx_id, trx_time, token_symbol, block_height, token_contract_address, trx_receipt_status, user_id):
+    def __init__(self, from_address, to_address, token_amount, token_precision, trx_id, trx_time, token_symbol, block_height, token_contract_address, trx_receipt_status, user_id, simple_token_amount):
         self.from_address = from_address
         self.to_address = to_address
         self.token_amount = token_amount
@@ -112,12 +113,14 @@ class EthTokenDepositOrder(db.Model):
         self.blocklink_coin_sent = False
         self.review_state = None
         self.review_message = None
+        self.simple_token_amount = simple_token_amount
 
     def __repr__(self):
         return '<EthTokenDepositOrder %d>' % self.id
 
     def to_dict(self):
         d = {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
+        d['simple_token_amount'] = str(self.simple_token_amount)
         d['created_at'] = time.mktime(self.created_at.utctimetuple())
         d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
         return d

@@ -150,15 +150,11 @@ def decode_auth_token(auth_token):
     """
     Decodes the auth token
     :param auth_token:
+    :throws jwt.ExpiredSignatureError or jwt.InvalidTokenError
     :return: integer|string
     """
-    try:
-        payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'))
-        return payload['sub']
-    except jwt.ExpiredSignatureError:
-        return 'Signature expired. Please log in again.'
-    except jwt.InvalidTokenError:
-        return 'Invalid token. Please log in again.'
+    payload = jwt.decode(auth_token, app.config.get('SECRET_KEY'))
+    return payload['sub']
 
 
 def generate_captcha_code(n=6):

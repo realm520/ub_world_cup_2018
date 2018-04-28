@@ -18,7 +18,7 @@ print(base64.b64encode(res[0].getvalue()).decode('utf8'))
 
 
 celery_task.direct_crawl_eth_token_deposits()
-
+# exit(0)
 
 # helpers.send_email('zhouwei@blocklinker.com', '这是一个测试邮件', 'this is a test message 测试测试')
 # exit(0)

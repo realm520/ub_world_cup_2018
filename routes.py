@@ -11,6 +11,8 @@ import base64
 import json
 import pickle
 import time
+import jwt
+from flask_jsonrpc.exceptions import InvalidParamsError
 from decimal import Decimal
 from helpers import allow_cross_domain
 from functools import wraps
@@ -19,6 +21,7 @@ from sqlalchemy import or_
 import captcha_helpers
 import celery_task
 from logging_config import logger
+import error_utils
 
 CORS(app)
 
@@ -38,7 +41,7 @@ def hello_world():
 X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
-# TODO: error codes, sweep tokens to offline wallet, backup, 对账
+# TODO: sweep tokens to offline wallet, backup, 对账. 需要增加一个超级管理员，超级管理员可以看到各以太账户的地址，地址的ETH余额，TOKEN余额，以及查看私钥，手动进行归账。或者调用geth
 
 def check_auth(f):
     @wraps(f)
@@ -48,17 +51,20 @@ def check_auth(f):
                 return f(*args, **kwargs)
             token = request.headers.get(X_TOKEN_HEADER_KEY, None)
             if token is None or len(token) < 1:
-                raise Exception("auth token not found")
+                raise error_utils.AutoTokenNotFoundError()
             user_id = helpers.decode_auth_token(token)
             user = User.query.get(user_id)
             if user is None or user.disabled:
-                raise Exception("user not found by auth token: %s" % token)
+                raise error_utils.UserNotFoundByAuthTokenError(token)
             session['user'] = user.to_print_json()
             session['user_id'] = user.id
             return f(*args, **kwargs)
+        except jwt.ExpiredSignatureError as _:
+            raise error_utils.AuthTokenExpiredError()
+        except jwt.InvalidTokenError as _:
+            raise error_utils.AuthTokenInvalidError()
         except Exception as e:
-            print(e)
-            raise e
+            raise error_utils.OtherError(str(e))
 
     return _f
 
@@ -112,7 +118,7 @@ def query_all_users_sum_unpayed_balances():
     """管理员查询所有用户的总的未支付余额"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     users = User.query.all()
     sum = Decimal(0)
     for user in users:
@@ -142,7 +148,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
         limit = 20
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     def make_query(keyword):
         q = EthTokenDepositOrder.query
         if user_id is not None:
@@ -155,8 +161,12 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
             q = q.filter_by(review_state=False)
         else:
             if review_state != 0 and review_state is not None:
-                raise Exception("invalid review_state params")
-        # TODO: 金额筛选
+                raise error_utils.OtherError("invalid review_state params")
+
+        if amount_min is not None:
+            q = q.filter(EthTokenDepositOrder.simple_token_amount >= amount_min)
+        if amount_max is not None:
+            q = q.filter(EthTokenDepositOrder.simple_token_amount <= amount_max)
         if min_timestamp is not None:
             q = q.filter(EthTokenDepositOrder.created_at >= datetime.utcfromtimestamp(min_timestamp))
         if keyword is not None and len(keyword.strip()) > 0:
@@ -166,7 +176,19 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
         return q
     q = make_query(keyword)
     orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
-    order_dicts = [order.to_dict() for order in orders]
+    # 关联表的信息
+    order_dicts = []
+    for order in orders:
+        order_obj = order.to_dict()
+        if order.review_lock_by_user_id is not None:
+            user = User.query.filter_by(id=order.review_lock_by_user_id).first()
+            if user is not None:
+                order_obj['review_lock_by_user'] = user.to_print_json()
+        if order.user_id is not None:
+            user = User.query.filter_by(id=order.user_id).first()
+            if user is not None:
+                order_obj['user'] = user.to_print_json()
+        order_dicts.append(order_obj)
     q = make_query(keyword)
     total = q.count()
     return {
@@ -184,14 +206,14 @@ def lock_deposit_order(order_id):
     """管理员锁定某个充值流水，避免两个管理员都去做这个充值流水的转账操作"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
-        raise Exception("Can't find this deposit order")
+        raise error_utils.DepositOrderNotFoundError()
     if order.review_state is not None:
-        raise Exception("this deposit order processed before")
+        raise error_utils.DepositOrderProcessedBeforeError()
     if order.review_lock_by_user_id is not None:
-        raise Exception("this deposit order locked by other user")
+        raise error_utils.DepositOrderLockedError()
     order.review_lock_by_user_id = cur_user.id
     order.updated_at = datetime.utcnow()
     db.session.add(order)
@@ -206,14 +228,14 @@ def unlock_deposit_order(order_id):
     """管理员解锁某个充值流水，从而此充值流水可以被再次锁定"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
-        raise Exception("Can't find this deposit order")
+        raise error_utils.DepositOrderNotFoundError()
     if order.review_state is not None:
-        raise Exception("this deposit order processed before")
+        raise error_utils.DepositOrderProcessedBeforeError()
     if order.review_lock_by_user_id is None:
-        raise Exception("this deposit order not locked before")
+        raise error_utils.OtherError("this deposit order not locked before")
     order.review_lock_by_user_id = None
     order.updated_at = datetime.utcnow()
     db.session.add(order)
@@ -228,10 +250,10 @@ def get_order_info(order_id):
     """管理员获取某个充值流水的信息"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
-        raise Exception("Can't find this deposit order")
+        raise error_utils.DepositOrderNotFoundError()
     return order.to_dict()
 
 
@@ -242,30 +264,30 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
     """管理员处理充值流水的代币兑换"""
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
-        raise Exception("only admin user can visit this api")
+        raise error_utils.PermissionDeniedError()
     if agree is None:
-        raise Exception("please agree or disagree")
+        raise error_utils.OtherError("please agree or disagree")
     if not helpers.is_valid_blocklink_trx_id(blocklink_trx_id):
-        raise Exception("invalid blocklink transaction id")
+        raise error_utils.OtherError("invalid blocklink transaction id")
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
-        raise Exception("Can't find this deposit order")
+        raise error_utils.DepositOrderNotFoundError()
     if order.review_state is not None:
-        raise Exception("this deposit order processed before")
+        raise error_utils.DepositOrderProcessedBeforeError()
     if updated_at is None or updated_at < time.mktime(order.updated_at.utctimetuple()):
-        raise Exception("your order data is too old, please refresh it")
+        raise error_utils.OtherError("your order data is too old, please refresh it")
     order_with_blocklink_trx_id = EthTokenDepositOrder.query.filter_by(
         blocklink_coin_sent_trx_id=blocklink_trx_id).first()
     if order_with_blocklink_trx_id is not None:
-        raise Exception("this blocklink transaction id used before in this service")
+        raise error_utils.BlocklinkTransactionIdUsedError()
     if order.user_id is None:
-        raise Exception("this deposit order not refer to a user")
+        raise error_utils.DepositOrderNotReferToUserError()
     user = User.query.get(order.user_id)
     if user is None:
-        raise Exception("Can't find user %d" % order.user_id)
+        raise error_utils.UserNotFoundError()
     deposit_amount = Decimal(order.token_amount) / Decimal(10 ** order.token_precision)
     if not helpers.is_blocklink_trx_amount_valid_for_deposit(blocklink_trx_id, user.blocklink_address, deposit_amount):
-        raise Exception("this blocklink transaction's amount not enough")
+        raise error_utils.BlocklinkTransactionAmountNotEnoughError()
     order.review_state = agree
     order.review_message = memo
 
@@ -290,10 +312,10 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
 def change_blocklink_address(address):
     user_json = session['user']
     if not helpers.is_valid_blocklink_address(address):
-        raise Exception("Invalid blocklink address format")
+        raise error_utils.InvalidBlocklinkAddressFormatError(address)
     user = User.query.get(user_json['id'])
     if user.blocklink_address == address:
-        raise Exception("Can't use old blocklink address")
+        raise error_utils.OtherError("Can't use old blocklink address")
     user.blocklink_address = address
     user.updated_at = datetime.utcnow()
     db.session.add(user)
@@ -307,7 +329,7 @@ def request_register_email_verify_code(email, picture_code_key, picture_verify_c
     if app.config['NEED_CAPTCHA']:
         picture_code_info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + picture_code_key)
         if picture_code_info is None or pickle.loads(picture_code_info)['code'] != picture_verify_code:
-            raise Exception("invalid picture verify code")
+            raise error_utils.InvalidPictureVerifyCodeError()
     token = request.headers.get(X_TOKEN_HEADER_KEY, None)
     if token is None or len(token) < 1:
         key = str(uuid.uuid4())
@@ -358,7 +380,7 @@ def request_picture_verify_code():
 def verify_picture_code(key, code):
     # TODO: check too often
     if key is None or code is None or len(key) < 1 or len(code) < 1:
-        raise Exception("invalid params")
+        raise InvalidParamsError()
     if app.config['NEED_CAPTCHA']:
         info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, None)
         if info is None:
@@ -379,7 +401,7 @@ def verify_blocklink_address_format(address):
 @allow_cross_domain
 def request_reset_password(email):
     if not helpers.is_valid_email_format(email):
-        raise Exception("invalid email format")
+        raise error_utils.EmailFormatError()
     token = request.headers.get(X_TOKEN_HEADER_KEY, None)
     if token is None or len(token) < 1:
         key = str(uuid.uuid4())
@@ -402,16 +424,16 @@ def request_reset_password(email):
 def reset_password(email, new_password, verify_code, key):
     user = User.query.filter_by(email=email).first()
     if user is None:
-        raise Exception("Can't find user %s" % email)
+        raise error_utils.UserNotFoundError()
     if app.config['NEED_CAPTCHA']:
         code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
         if code_info is None or pickle.loads(code_info)['code'] != verify_code:
-            raise Exception("invalid verify code")
+            raise error_utils.InvalidEmailVerifyCodeError()
 
     if not helpers.check_password_format(new_password):
-        raise Exception("password format error")
+        raise error_utils.PasswordFormatError()
     if helpers.check_password(new_password, user.password):
-        raise Exception("can't use old password")
+        raise error_utils.OtherError("can't use old password")
     password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
     user.password = password_crypted
     user.updated_at = datetime.utcnow()
@@ -426,22 +448,22 @@ def reset_password(email, new_password, verify_code, key):
 def update_profile(email, new_password, blocklink_address, verify_code, key):
     user = User.query.filter_by(email=email).first()
     if user is None:
-        raise Exception("Can't find user %s" % email)
+        raise error_utils.UserNotFoundError()
     if app.config['NEED_CAPTCHA']:
         code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
         if code_info is None or pickle.loads(code_info)['code'] != verify_code:
-            raise Exception("invalid verify code")
+            raise error_utils.InvalidEmailVerifyCodeError()
 
     if not helpers.check_password_format(new_password):
-        raise Exception("password format error")
+        raise error_utils.PasswordFormatError()
     if helpers.check_password(new_password, user.password):
-        raise Exception("can't use old password")
+        raise error_utils.OtherError("can't use old password")
     password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
     user.password = password_crypted
 
     if blocklink_address is not None and len(blocklink_address) > 0:
         if not helpers.is_valid_blocklink_address(blocklink_address):
-            raise Exception("Invalid blocklink address format")
+            raise error_utils.InvalidBlocklinkAddressFormatError(blocklink_address)
         if user.blocklink_address != blocklink_address:
             user.blocklink_address = blocklink_address
 
@@ -465,15 +487,15 @@ def logout():
 @allow_cross_domain
 def login(loginname, password, verify_code):
     if loginname is None or len(loginname) < 1:
-        raise Exception("loginname can't be empty")
+        raise InvalidParamsError()
     # TODO; picture verify code check if this session request too many times
     user = User.query.filter_by(email=loginname).first()
     if user is None:
-        raise Exception("user not found")
+        raise error_utils.UserNotFoundError()
     if password is None or len(password) < 1:
-        raise Exception("password can't be empty")
+        raise error_utils.PasswordFormatError()
     if not helpers.check_password(password.encode('utf8'), user.password):
-        raise Exception("Invalid username or password")
+        raise error_utils.InvalidUsernameOrPasswordError()
     token = helpers.encode_auth_token(user.id)
     user_json = user.to_print_json()
     user_json['auth_token'] = token.decode('utf8')
@@ -487,24 +509,24 @@ def login(loginname, password, verify_code):
 @allow_cross_domain
 def register(email, password, blocklink_address, mobile, family_name, given_name, email_verify_code, email_code_key):
     if not helpers.is_valid_email_format(email):
-        raise Exception("invalid email format")
+        raise error_utils.EmailFormatError()
     if email is None or len(email) < 1:
-        raise Exception("email can't be empty")
+        raise error_utils.EmailFormatError()
     if password is None or len(password) < 6:
-        raise Exception("password can't be empty or less than 6 characters")
+        raise error_utils.PasswordFormatError()
     user = User.query.filter_by(email=email).first()
     if user is not None:
-        raise Exception("user with email %s existed" % email)
-    if mobile is not None and len(mobile) > 30:
-        raise Exception("mobile too long")
+        raise error_utils.UserWithEmailExistedError(email)
 
     if app.config['NEED_CAPTCHA']:
         email_code_info = redis_store.get(EMAIL_VERIFY_CODE_CACHE_KEY_PREFIX + email_code_key)
         if email_code_info is None or pickle.loads(email_code_info)['code'] != email_verify_code:
-            raise Exception("invalid email verify code")
+            raise error_utils.InvalidEmailVerifyCodeError()
 
     if blocklink_address is not None and not helpers.is_valid_blocklink_address(blocklink_address):
-        raise Exception("blocklink address %s format error" % blocklink_address)
+        raise error_utils.InvalidBlocklinkAddressFormatError(blocklink_address)
+    if mobile is not None and len(mobile) > 30:
+        raise error_utils.InvalidMobilePhoneFormatError()
     eth_account = helpers.generate_eth_account()
     encrypt_password = app.config['ETH_ENCRYPT_PASSWORD']
     password_crypted = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
