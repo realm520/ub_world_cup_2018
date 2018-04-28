@@ -6,6 +6,7 @@ from app import app, db, jsonrpc, redis_store
 from models import User, EthAccount, EthTokenDepositOrder
 import bcrypt
 import helpers
+import eth_helpers
 import uuid
 import base64
 import json
@@ -41,7 +42,8 @@ def hello_world():
 X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
-# TODO: sweep tokens to offline wallet, backup, 对账. 需要增加一个超级管理员，超级管理员可以看到各以太账户的地址，地址的ETH余额，TOKEN余额，以及查看私钥，手动进行归账。或者调用geth
+# TODO: sweep tokens to offline wallet, backup, 对账. 需要增加一个超级管理员，超级管理员可以看到各以太账户的地址，地址的ETH余额，TOKEN余额，以及查看私钥，手动进行归账。或者调用geth/myetherwallet api
+# TODO: 查询各用户的充值地址的以太和代币的余额
 
 def check_auth(f):
     @wraps(f)
@@ -126,7 +128,133 @@ def query_all_users_sum_unpayed_balances():
     return str(sum)
 
 
-@jsonrpc.method('App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=int,amount_min=str,amount_max=str,min_timestamp=int,keyword=str)')
+@jsonrpc.method(
+    'App.listUsers(offset=int,limit=int,keyword=str)')
+@allow_cross_domain
+@check_auth
+def query_users(offset, limit, keyword):
+    """
+    管理员查询所有用户的信息
+    :param offset: 0-based偏移量
+    :param limit: 本次最多取的记录数量
+    :param keyword: 用户邮箱或者充值地址或者blocklink地址
+    :return:
+    """
+    if offset is None or offset < 0:
+        offset = 0
+    if limit is None or limit < 1:
+        limit = 20
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise error_utils.PermissionDeniedError()
+
+    def make_query(keyword):
+        q = User.query
+        if keyword is not None and len(keyword) > 0:
+            q = q.filter(or_(User.email == keyword, User.eth_address == keyword, User.blocklink_address == keyword))
+        return q
+
+    users = make_query(keyword).order_by(User.created_at.desc()).offset(offset).limit(limit).all()
+    total = make_query(keyword).count()
+    users_dicts = [user.to_print_json() for user in users]
+    return helpers.make_paginator_response(offset, limit, total, users_dicts)
+
+
+@jsonrpc.method(
+    'App.getUser(user_id=int)')
+@allow_cross_domain
+@check_auth
+def query_user(user_id):
+    """
+    管理员查看用户信息
+    :param user_id:
+    :return:
+    """
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise error_utils.PermissionDeniedError()
+    user = User.query.filter_by(id=user_id)
+    if user is None:
+        return None
+    else:
+        return user.to_print_json()
+
+
+@jsonrpc.method(
+    'App.getEthAccount(address=str)')
+@allow_cross_domain
+@check_auth
+def query_eth_account(address):
+    """
+    管理员查看充值账户（以太账户）信息
+    :param address:
+    :return:
+    """
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise error_utils.PermissionDeniedError()
+    account = EthAccount.query.filter_by(address=address)
+    if account is None:
+        return None
+    else:
+        account_dict = account.to_dict()
+        balances = eth_helpers.query_eth_addresses_balances_of_eth([account.address])
+        token_contract_address = app.config['BLOCKLINK_ERC20_CONTRACT_ADDRESS']
+        token_balances = eth_helpers.query_eth_addresses_balances_of_token([account.address], token_contract_address)
+        account_dict['eth_balance'] = balances.get(account.address, eth_helpers.EthAccountBalance(account.address, 0))
+        account_dict['token_balance'] = token_balances.get(account.address,
+                                                           eth_helpers.EthAccountBalance(account.address, 0,
+                                                                                         token_contract_address))
+        return account_dict
+
+
+@jsonrpc.method(
+    'App.listDepositEthAccounts(offset=int,limit=int,keyword=str)')
+@allow_cross_domain
+@check_auth
+def query_deposit_eth_accounts(offset, limit, keyword):
+    """
+    管理员查询系统中的各充值账户（以太账户）的信息
+    :param offset: 0-based偏移量
+    :param limit: 取的记录数量
+    :param keyword: 以太充值地址或所属用户邮箱
+    :return:
+    """
+    if offset is None or offset < 0:
+        offset = 0
+    if limit is None or limit < 1:
+        limit = 20
+    cur_user = User.query.get(session['user_id'])
+    if cur_user is None or not cur_user.is_admin:
+        raise error_utils.PermissionDeniedError()
+
+    def make_query(keyword):
+        q = EthAccount.query
+        if keyword is not None and len(keyword) > 0:
+            q = q.join(User, User.eth_address == EthAccount.address)
+            q = q.filter(or_(EthAccount.address == keyword, User.email == keyword))
+        return q
+
+    eth_accounts = make_query(keyword).order_by(EthAccount.created_at.desc()).offset(offset).limit(limit).all()
+    total = make_query(keyword).count()
+    eth_accounts_dicts = []
+    eth_addresses = [account.address for account in eth_accounts]
+    eth_balances = eth_helpers.query_eth_addresses_balances_of_eth(eth_addresses)
+    token_contract_address = app.config['BLOCKLINK_ERC20_CONTRACT_ADDRESS']
+    token_balances = eth_helpers.query_eth_addresses_balances_of_token(eth_addresses, token_contract_address)
+    for eth_account in eth_accounts:
+        eth_account_dict = eth_account.to_dict()
+        eth_account_dict['eth_balance'] = eth_balances.get(eth_account.address,
+                                                           eth_helpers.EthAccountBalance(eth_account.address, 0))
+        eth_account_dict['token_balance'] = token_balances.get(eth_account.address,
+                                                               eth_helpers.EthAccountBalance(eth_account.address, 0,
+                                                                                             token_contract_address))
+        eth_accounts_dicts.append(eth_account_dict)
+    return helpers.make_paginator_response(offset, limit, total, eth_accounts_dicts)
+
+
+@jsonrpc.method(
+    'App.usersDepositHistory(user_id=str,offset=int,limit=int,review_state=int,amount_min=str,amount_max=str,min_timestamp=int,keyword=str)')
 @allow_cross_domain
 @check_auth
 def query_users_deposit_history(user_id, offset, limit, review_state, amount_min, amount_max, min_timestamp, keyword):
@@ -149,6 +277,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
     cur_user = User.query.get(session['user_id'])
     if cur_user is None or not cur_user.is_admin:
         raise error_utils.PermissionDeniedError()
+
     def make_query(keyword):
         q = EthTokenDepositOrder.query
         if user_id is not None:
@@ -172,10 +301,10 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
         if keyword is not None and len(keyword.strip()) > 0:
             keyword = keyword.strip()
             q = q.join(User, User.id == EthTokenDepositOrder.user_id)
-            q = q.filter(or_(User.eth_address == keyword, User.email==keyword))
+            q = q.filter(or_(User.eth_address == keyword, User.email == keyword))
         return q
-    q = make_query(keyword)
-    orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
+
+    orders = make_query(keyword).order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
     # 关联表的信息
     order_dicts = []
     for order in orders:
@@ -189,8 +318,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
             if user is not None:
                 order_obj['user'] = user.to_print_json()
         order_dicts.append(order_obj)
-    q = make_query(keyword)
-    total = q.count()
+    total = make_query(keyword).count()
     return {
         'items': order_dicts,
         'offset': offset,
@@ -527,7 +655,7 @@ def register(email, password, blocklink_address, mobile, family_name, given_name
         raise error_utils.InvalidBlocklinkAddressFormatError(blocklink_address)
     if mobile is not None and len(mobile) > 30:
         raise error_utils.InvalidMobilePhoneFormatError()
-    eth_account = helpers.generate_eth_account()
+    eth_account = eth_helpers.generate_eth_account()
     encrypt_password = app.config['ETH_ENCRYPT_PASSWORD']
     password_crypted = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
     user = User(email=email, password=password_crypted, mobile=mobile, eth_address=None,
@@ -535,9 +663,9 @@ def register(email, password, blocklink_address, mobile, family_name, given_name
     user.eth_address = eth_account.address.lower()
     db.session.add(user)
     account = EthAccount(eth_account.address.lower(),
-                         helpers.encrypt_eth_privatekey(eth_account.privateKey.hex(), encrypt_password))
-    assert helpers.decrypt_eth_privatekey(account.encrypted_private_key,
-                                          encrypt_password) == eth_account.privateKey.hex()
+                         eth_helpers.encrypt_eth_privatekey(eth_account.privateKey.hex(), encrypt_password))
+    assert eth_helpers.decrypt_eth_privatekey(account.encrypted_private_key,
+                                              encrypt_password) == eth_account.privateKey.hex()
     db.session.add(account)
     db.session.commit()
     # TODO: daily backup eth address/privatekeys to private admin email

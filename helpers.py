@@ -88,30 +88,6 @@ def is_valid_email_format(email):
         return False
 
 
-def generate_eth_account():
-    return eth_account.Account.create()
-
-
-def encrypt_eth_privatekey(private_key, password):
-    # TODO
-    return private_key
-    # if len(password) < 16:
-    #     password = password + '0'*(16-len(password))
-    # encoder = AESCipher(password)
-    # enrypted = encoder.encrypt(private_key)
-    # return enrypted
-
-
-def decrypt_eth_privatekey(encrypted_private_key, password):
-    # TODO
-    return encrypted_private_key
-    # if len(password) < 16:
-    #     password = password + '0'*(16-len(password))
-    # encoder = AESCipher(password)
-    # decrypted = encoder.decrypt(encrypted_private_key)
-    # return decrypted
-
-
 def check_password_format(password):
     if password is None or len(password) < 6 or len(password) > 40:
         return False
@@ -183,3 +159,12 @@ def send_email(to_address, subject, content):
     except smtplib.SMTPException as e:
         print(e)
         return False
+
+
+def make_paginator_response(offset, limit, total, items):
+    return {
+        'offset': offset,
+        'limit': limit,
+        'total': total,
+        'items': items,
+    }

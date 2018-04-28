@@ -72,6 +72,13 @@ class EthAccount(db.Model):
     def __repr__(self):
         return '<EthAccount %d>' % self.id
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'address': self.address,
+            'created_at': time.mktime(self.created_at.utctimetuple()),
+            'updated_at': time.mktime(self.updated_at.utctimetuple()),
+        }
 
 class EthTokenDepositOrder(db.Model):
     __tablename__ = 'eth_token_deposit_order'
