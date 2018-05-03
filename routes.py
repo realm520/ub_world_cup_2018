@@ -656,14 +656,14 @@ def register(email, password, blocklink_address, mobile, family_name, given_name
     if mobile is not None and len(mobile) > 30:
         raise error_utils.InvalidMobilePhoneFormatError()
     eth_account = eth_helpers.generate_eth_account()
-    encrypt_password = app.config['ETH_ENCRYPT_PASSWORD']
+    encrypt_password = app.config['ETH_ENCRYPT_PASSWORD'].encode('utf8')
     password_crypted = bcrypt.hashpw(password.encode('utf8'), bcrypt.gensalt())
     user = User(email=email, password=password_crypted, mobile=mobile, eth_address=None,
                 blocklink_address=blocklink_address, family_name=family_name, given_name=given_name)
     user.eth_address = eth_account.address.lower()
     db.session.add(user)
     account = EthAccount(eth_account.address.lower(),
-                         eth_helpers.encrypt_eth_privatekey(eth_account.privateKey.hex(), encrypt_password))
+                         eth_helpers.encrypt_eth_privatekey(helpers.safeunicode(eth_account.privateKey.hex()), encrypt_password))
     assert eth_helpers.decrypt_eth_privatekey(account.encrypted_private_key,
                                               encrypt_password) == eth_account.privateKey.hex()
     db.session.add(account)

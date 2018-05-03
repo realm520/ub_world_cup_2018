@@ -14,23 +14,19 @@ def generate_eth_account():
 
 
 def encrypt_eth_privatekey(private_key, password):
-    # TODO
-    return private_key
-    # if len(password) < 16:
-    #     password = password + '0'*(16-len(password))
-    # encoder = helpers.AESCipher(password)
-    # enrypted = encoder.encrypt(private_key)
-    # return enrypted
+    if len(password) < 16:
+        password = password + ('0'*(16-len(password))).encode('utf8')
+    encoder = helpers.AESCipher(password)
+    enrypted = encoder.encrypt(private_key)
+    return base64.b64encode(enrypted).decode('utf8')
 
 
 def decrypt_eth_privatekey(encrypted_private_key, password):
-    # TODO
-    return encrypted_private_key
-    # if len(password) < 16:
-    #     password = password + '0'*(16-len(password))
-    # encoder = helpers.AESCipher(password)
-    # decrypted = encoder.decrypt(encrypted_private_key)
-    # return decrypted
+    if len(password) < 16:
+        password = password + ('0'*(16-len(password))).encode('utf8')
+    encoder = helpers.AESCipher(password)
+    decrypted = encoder.decrypt(base64.b64decode(encrypted_private_key))
+    return decrypted
 
 
 class EthAccountBalance(object):

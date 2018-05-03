@@ -10,10 +10,10 @@ import eth_helpers
 import celery_task
 import unittest
 
-encoded_privatekey = eth_helpers.encrypt_eth_privatekey('123456', '12345ssdlh')
-decoded_privatekey = eth_helpers.decrypt_eth_privatekey(encoded_privatekey, '12345ssdlh')
+encoded_privatekey = eth_helpers.encrypt_eth_privatekey('123456', '12345ssdlh'.encode('utf8'))
+decoded_privatekey = eth_helpers.decrypt_eth_privatekey(encoded_privatekey, '12345ssdlh'.encode('utf8'))
+print(encoded_privatekey, decoded_privatekey)
 assert decoded_privatekey == '123456'
-exit(0)
 
 
 os.environ['ETH_ENCRYPT_PASSWORD'] = '123456'

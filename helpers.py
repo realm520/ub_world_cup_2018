@@ -20,6 +20,31 @@ from app import app
 import eth_account
 import config
 
+def safeunicode(obj, encoding='utf-8'):
+    r"""
+    Converts any given object to unicode string.
+        >>> safeunicode('hello')
+        u'hello'
+        >>> safeunicode(2)
+        u'2'
+        >>> safeunicode('\xe1\x88\xb4')
+        u'\u1234'
+    """
+    t = type(obj)
+    if t is str:
+        return obj
+    elif t is bytes:
+        return obj.decode(encoding, 'ignore')
+    elif t in [int, float, bool]:
+        return str(obj)
+    elif hasattr(obj, '__unicode__') or isinstance(obj, str):
+        try:
+            return str(obj)
+        except Exception as e:
+            return u""
+    else:
+        return str(obj).decode(encoding, 'ignore')
+
 BS = 16
 pad = lambda s: s + (BS - len(s) % BS) * chr(BS - len(s) % BS)
 unpad = lambda s: s[:-ord(s[len(s) - 1:])]
