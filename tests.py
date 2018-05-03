@@ -7,6 +7,8 @@ import captcha_helpers
 import app
 import helpers
 import eth_helpers
+import eth_utils
+import eth_utils.crypto
 import celery_task
 import unittest
 
@@ -14,6 +16,22 @@ encoded_privatekey = eth_helpers.encrypt_eth_privatekey('123456', '12345ssdlh'.e
 decoded_privatekey = eth_helpers.decrypt_eth_privatekey(encoded_privatekey, '12345ssdlh'.encode('utf8'))
 print(encoded_privatekey, decoded_privatekey)
 assert decoded_privatekey == '123456'
+
+
+baz_abi = eth_helpers.get_eth_method_id('baz(uint32,bool)')
+print(baz_abi)
+assert baz_abi == 'cdcd77c0'
+transfer_abi = eth_helpers.get_eth_method_id(eth_helpers.get_eth_contract_token_transfer_signature())
+print(transfer_abi)
+assert transfer_abi == 'a9059cbb'
+first_param_eth = eth_helpers.wrap_eth_method_parameter(69)
+second_param_eth = eth_helpers.wrap_eth_method_parameter(True)
+print(first_param_eth, second_param_eth)
+assert first_param_eth == '0000000000000000000000000000000000000000000000000000000000000045'
+assert second_param_eth == '0000000000000000000000000000000000000000000000000000000000000001'
+
+celery_task.sweep_deposit_eth_accounts_balances()
+exit(0)
 
 
 os.environ['ETH_ENCRYPT_PASSWORD'] = '123456'
@@ -26,9 +44,6 @@ print(base64.b64encode(res[0].getvalue()).decode('utf8'))
 
 
 celery_task.direct_crawl_eth_token_deposits()
-# exit(0)
-
-# helpers.send_email('zhouwei@blocklinker.com', '这是一个测试邮件', 'this is a test message 测试测试')
 # exit(0)
 
 email1 = 'test1@blocklink.com'

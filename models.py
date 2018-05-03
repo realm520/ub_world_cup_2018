@@ -80,6 +80,7 @@ class EthAccount(db.Model):
             'updated_at': time.mktime(self.updated_at.utctimetuple()),
         }
 
+
 class EthTokenDepositOrder(db.Model):
     __tablename__ = 'eth_token_deposit_order'
     id = db.Column(db.Integer, primary_key=True)
@@ -105,7 +106,8 @@ class EthTokenDepositOrder(db.Model):
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
 
-    def __init__(self, from_address, to_address, token_amount, token_precision, trx_id, trx_time, token_symbol, block_height, token_contract_address, trx_receipt_status, user_id, simple_token_amount):
+    def __init__(self, from_address, to_address, token_amount, token_precision, trx_id, trx_time, token_symbol,
+                 block_height, token_contract_address, trx_receipt_status, user_id, simple_token_amount):
         self.from_address = from_address
         self.to_address = to_address
         self.token_amount = token_amount
@@ -131,3 +133,35 @@ class EthTokenDepositOrder(db.Model):
         d['created_at'] = time.mktime(self.created_at.utctimetuple())
         d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
         return d
+
+
+class EthTokenSweepTransaction(db.Model):
+    """以太token归账流水表"""
+    __tablename__ = 'eth_token_sweep_transaction'
+    id = db.Column(db.Integer, primary_key=True)
+    tx_id = db.Column(db.String(100), nullable=True)  # 以太链上的交易ID
+    from_address = db.Column(db.String(100), nullable=False)
+    to_address = db.Column(db.String(100), nullable=False)
+    token_contract_address = db.Column(db.String(100), nullable=True)  # 如果是None或者空串表示是以太的归账
+    amount = db.Column(db.DECIMAL(precision=18), nullable=False)
+    confirmed = db.Column(db.Boolean, default=False, nullable=False)  # 交易是否已链上确认
+    created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
+    updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
+
+    def __init__(self, tx_id, from_address, to_address, token_contract_address, amount):
+        self.tx_id = tx_id
+        self.from_address = from_address
+        self.to_address = to_address
+        self.token_contract_address = token_contract_address
+        self.amount = amount
+
+    def __repr__(self):
+        return '<EthTokenSweepTransaction %d>' % self.id
+
+    def to_dict(self):
+        d = {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
+        d['amount'] = str(self.amount)
+        d['created_at'] = time.mktime(self.created_at.utctimetuple())
+        d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
+        return d
+

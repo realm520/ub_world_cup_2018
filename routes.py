@@ -3,7 +3,7 @@ from __future__ import print_function
 from flask import request, session
 from flask_cors import CORS, cross_origin
 from app import app, db, jsonrpc, redis_store
-from models import User, EthAccount, EthTokenDepositOrder
+from models import User, EthAccount, EthTokenDepositOrder, EthTokenSweepTransaction
 import bcrypt
 import helpers
 import eth_helpers
@@ -42,8 +42,22 @@ def hello_world():
 X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
-# TODO: sweep tokens to offline wallet, backup, 对账. 需要增加一个超级管理员，超级管理员可以看到各以太账户的地址，地址的ETH余额，TOKEN余额，以及查看私钥，手动进行归账。或者调用geth/myetherwallet api
-# TODO: 归账前需要转一点以太到充值账户做手续费（如果确定充值账户的代币需要归账，太少可以先不归账）
+def disable_jwt_token(token):
+    """禁用某个jwt token"""
+    key = 'disable_%s' % token
+    redis_store.set(key, '1')
+    redis_store.expire(key, 60*60)
+
+
+def is_jwt_disabled(token):
+    """判断某个jwt token是否被禁用"""
+    key = 'disable_%s' % token
+    val = redis_store.get(key)
+    if val is not None and str(val) == str(1):
+        return True
+    else:
+        return False
+
 
 def check_auth(f):
     @wraps(f)
@@ -55,6 +69,8 @@ def check_auth(f):
             if token is None or len(token) < 1:
                 raise error_utils.AutoTokenNotFoundError()
             user_id = helpers.decode_auth_token(token)
+            if is_jwt_disabled(token):
+                raise error_utils.AuthTokenExpiredError()
             user = User.query.get(user_id)
             if user is None or user.disabled:
                 raise error_utils.UserNotFoundByAuthTokenError(token)
@@ -608,6 +624,9 @@ def logout():
     """注销退出"""
     session['user'] = None
     session['user_id'] = None
+    token = request.headers.get(X_TOKEN_HEADER_KEY, None)
+    if token is not None:
+        disable_jwt_token(token)
     return True
 
 

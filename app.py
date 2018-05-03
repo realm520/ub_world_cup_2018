@@ -41,6 +41,15 @@ jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 if len(app.config['ETH_ENCRYPT_PASSWORD']) > 16:
     raise Exception("ETH_ENCRYPT_PASSWORD too long")
 
+if app.config.get('SWEEP_TO_ETH_ADDRESS', None) is None:
+    raise Exception("SWEEP_TO_ETH_ADDRESS not found")
+
+if app.config.get('SWEEP_GAS_SPENDER_ETH_ADDRESS', None) is None:
+    raise Exception("SWEEP_GAS_SPENDER_ETH_ADDRESS not found")
+
+if app.config.get('SWEEP_GAS_SPENDER_ETH_PRIVATE_KEY', None) is None:
+    raise Exception("SWEEP_GAS_SPENDER_ETH_PRIVATE_KEY not found")
+
 db = SQLAlchemy(app)
 
 

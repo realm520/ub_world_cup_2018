@@ -51,7 +51,6 @@ unpad = lambda s: s[:-ord(s[len(s) - 1:])]
 
 
 class AESCipher:
-    # FIXME
     def __init__(self, key):
         self.key = key
 
