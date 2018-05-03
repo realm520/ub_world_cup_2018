@@ -6,7 +6,15 @@ from flask_jsonrpc.proxy import ServiceProxy
 import captcha_helpers
 import app
 import helpers
+import eth_helpers
 import celery_task
+import unittest
+
+encoded_privatekey = eth_helpers.encrypt_eth_privatekey('123456', '12345ssdlh')
+decoded_privatekey = eth_helpers.decrypt_eth_privatekey(encoded_privatekey, '12345ssdlh')
+assert decoded_privatekey == '123456'
+exit(0)
+
 
 os.environ['ETH_ENCRYPT_PASSWORD'] = '123456'
 

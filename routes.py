@@ -510,7 +510,7 @@ def verify_picture_code(key, code):
     if key is None or code is None or len(key) < 1 or len(code) < 1:
         raise InvalidParamsError()
     if app.config['NEED_CAPTCHA']:
-        info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, None)
+        info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key)
         if info is None:
             return False
         info = pickle.loads(info)

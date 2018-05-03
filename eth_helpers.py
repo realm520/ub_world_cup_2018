@@ -6,6 +6,7 @@ import requests
 from decimal import Decimal
 from Crypto import Random
 from Crypto.Cipher import AES
+import helpers
 
 
 def generate_eth_account():
@@ -17,7 +18,7 @@ def encrypt_eth_privatekey(private_key, password):
     return private_key
     # if len(password) < 16:
     #     password = password + '0'*(16-len(password))
-    # encoder = AESCipher(password)
+    # encoder = helpers.AESCipher(password)
     # enrypted = encoder.encrypt(private_key)
     # return enrypted
 
@@ -27,7 +28,7 @@ def decrypt_eth_privatekey(encrypted_private_key, password):
     return encrypted_private_key
     # if len(password) < 16:
     #     password = password + '0'*(16-len(password))
-    # encoder = AESCipher(password)
+    # encoder = helpers.AESCipher(password)
     # decrypted = encoder.decrypt(encrypted_private_key)
     # return decrypted
 
