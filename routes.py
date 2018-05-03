@@ -43,7 +43,7 @@ X_TOKEN_HEADER_KEY = 'X-TOKEN'
 
 
 # TODO: sweep tokens to offline wallet, backup, 对账. 需要增加一个超级管理员，超级管理员可以看到各以太账户的地址，地址的ETH余额，TOKEN余额，以及查看私钥，手动进行归账。或者调用geth/myetherwallet api
-# TODO: 查询各用户的充值地址的以太和代币的余额
+# TODO: 归账前需要转一点以太到充值账户做手续费（如果确定充值账户的代币需要归账，太少可以先不归账）
 
 def check_auth(f):
     @wraps(f)
@@ -201,10 +201,10 @@ def query_eth_account(address):
         balances = eth_helpers.query_eth_addresses_balances_of_eth([account.address])
         token_contract_address = app.config['BLOCKLINK_ERC20_CONTRACT_ADDRESS']
         token_balances = eth_helpers.query_eth_addresses_balances_of_token([account.address], token_contract_address)
-        account_dict['eth_balance'] = balances.get(account.address, eth_helpers.EthAccountBalance(account.address, 0))
-        account_dict['token_balance'] = token_balances.get(account.address,
+        account_dict['eth_balance'] = str(balances.get(account.address, eth_helpers.EthAccountBalance(account.address, 0)).simple_balance)
+        account_dict['token_balance'] = str(token_balances.get(account.address,
                                                            eth_helpers.EthAccountBalance(account.address, 0,
-                                                                                         token_contract_address))
+                                                                                         token_contract_address)).simple_balance)
         return account_dict
 
 
@@ -244,11 +244,11 @@ def query_deposit_eth_accounts(offset, limit, keyword):
     token_balances = eth_helpers.query_eth_addresses_balances_of_token(eth_addresses, token_contract_address)
     for eth_account in eth_accounts:
         eth_account_dict = eth_account.to_dict()
-        eth_account_dict['eth_balance'] = eth_balances.get(eth_account.address,
-                                                           eth_helpers.EthAccountBalance(eth_account.address, 0))
-        eth_account_dict['token_balance'] = token_balances.get(eth_account.address,
+        eth_account_dict['eth_balance'] = str(eth_balances.get(eth_account.address,
+                                                           eth_helpers.EthAccountBalance(eth_account.address, 0)).simple_balance)
+        eth_account_dict['token_balance'] = str(token_balances.get(eth_account.address,
                                                                eth_helpers.EthAccountBalance(eth_account.address, 0,
-                                                                                             token_contract_address))
+                                                                                             token_contract_address)).simple_balance)
         eth_accounts_dicts.append(eth_account_dict)
     return helpers.make_paginator_response(offset, limit, total, eth_accounts_dicts)
 

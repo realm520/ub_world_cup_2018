@@ -25,6 +25,7 @@ class Config:
     FLASKY_MAIL_SUBJECT_PREFIX = ''
     FLASKY_MAIL_SENDER = ''
     FLASKY_ADMIN = os.environ.get('FLASKY_ADMIN')
+    REDIS_URL = "redis://:@%s:6379/0" % os.getenv('RHOST', 'localhost')
 
     @staticmethod
     def init_app(app):

@@ -9,6 +9,7 @@ from celery import Celery
 from datetime import timedelta
 import os
 import config
+from logging_config import logger
 
 config_model = 'development'
 if os.environ.get('production', None) is not None:
@@ -16,12 +17,11 @@ if os.environ.get('production', None) is not None:
 elif os.environ.get('testing', None) is not None:
     config_model = 'testing'
 
-print('current config model is %s' % config_model)
+logger.info('current config model is %s' % config_model)
 
 app = Flask(__name__)
 app.config.from_object(config.config[config_model])
 
-REDIS_URL = "redis://:@%s:6379/0" % os.getenv('RHOST', 'localhost')
 redis_store = FlaskRedis(app)
 
 
@@ -68,7 +68,7 @@ import routes
 try:
     db.create_all()
 except Exception as e:
-    print(e)
+    logger.error("init db error", e)
     pass
 
 if __name__ == '__main__':

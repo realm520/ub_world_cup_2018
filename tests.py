@@ -76,3 +76,9 @@ print(res)
 
 res = server.App.usersDepositHistory(None, None, None, None, None, None, None, email1)
 print(res)
+
+res = server.App.listUsers(None, None, None)
+print("listUsers:", res['result'])
+
+res = server.App.listDepositEthAccounts(None, None, None)
+print("listDepositEthAccounts:", res['result'])
