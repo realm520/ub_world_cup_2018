@@ -31,7 +31,9 @@ class Config:
     SWEEP_GAS_SPENDER_ETH_ADDRESS = None  # 归账时需要从这个地址转一点ETH到以太充值地址作gas
     SWEEP_GAS_SPENDER_ETH_PRIVATE_KEY = None  # 归账时支付gas的以太地址的私钥
 
-    MIN_SWEEP_BLOCKLINK_TOKEN_AMOUNT = 10**18  # 以太充值账户中最少多少个blocklink 的ETH ERC20 token代币才进行归账操作
+    GETH_RPC_URL = 'http://192.168.1.124:40018'
+
+    MIN_SWEEP_BLOCKLINK_TOKEN_AMOUNT = (1**18)  # 以太充值账户中最少多少个blocklink 的ETH ERC20 token代币才进行归账操作
 
     CELERYBEAT_SCHEDULE = {
         'every-one-minute': {
@@ -86,7 +88,7 @@ class TestingConfig(DevelopmentConfig):
     SMTP_PASSWORD = 'ZSsdlh12345'
 
     ETH_ENCRYPT_PASSWORD = '123456'
-    BLOCKLINK_ERC20_CONTRACT_ADDRESS = '0xd850942ef8811f2a866692a623011bde52a462c1'  # FIXME: this is VEN address for development
+    BLOCKLINK_ERC20_CONTRACT_ADDRESS = '0xd7cddd45629934c2f6ed3b63217bd8085d7c14a8'  # FIXME: this is AVH address for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
                               "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_dev"
 
@@ -117,7 +119,7 @@ class ProductionConfig(Config):
 
     SWEEP_TO_ETH_ADDRESS = os.getenv('SWEEP_TO_ETH_ADDRESS', None)
 
-    MIN_SWEEP_BLOCKLINK_TOKEN_AMOUNT = 10 * (10**18)  # 以太充值账户中最少多少个blocklink 的ETH ERC20 token代币才进行归账操作
+    MIN_SWEEP_BLOCKLINK_TOKEN_AMOUNT = (10 * (10**18))  # 以太充值账户中最少多少个blocklink 的ETH ERC20 token代币才进行归账操作
 
     SQLALCHEMY_TRACK_MODIFICATIONS = True
     SQLALCHEMY_POOL_SIZE = 200

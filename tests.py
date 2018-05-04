@@ -78,18 +78,18 @@ res = server.App.requestResetPassword(email1)
 print(res)
 assert isinstance(res['result']['key'], str)
 
-res = server.App.resetPassword(email1, '111111', 'abcdef', server.headers['X-TOKEN'])
-print(res)
-assert res['result']['email'] == email1
-
-res = server.App.login(email1, '111111', 'abcd')
-print(res)
-user = res['result']
-assert user['email'] == email1
-
-res = server.App.resetPassword(email1, '123456', 'abcdef', server.headers['X-TOKEN'])
-print(res)
-assert res['result']['email'] == email1
+# res = server.App.resetPassword(email1, '111111', 'abcdef', server.headers['X-TOKEN'])
+# print(res)
+# assert res['result']['email'] == email1
+#
+# res = server.App.login(email1, '111111', 'abcd')
+# print(res)
+# user = res['result']
+# assert user['email'] == email1
+#
+# res = server.App.resetPassword(email1, '123456', 'abcdef', server.headers['X-TOKEN'])
+# print(res)
+# assert res['result']['email'] == email1
 
 res = server.App.requestPictureVerifyCode()
 print(res)
@@ -97,8 +97,8 @@ print(res)
 res = server.App.myDepositHistory(None, None, None, True)
 print(res)
 
-res = server.App.usersDepositHistory(None, None, None, None, None, None, None, email1)
-print(res)
+res = server.App.usersDepositHistory(None, None, None, None, None, None, 1524758400, email1)
+print("usersDepositHistory", res['result'])
 
 res = server.App.listUsers(None, None, None)
 print("listUsers:", res['result'])
