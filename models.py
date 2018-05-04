@@ -134,6 +134,18 @@ class EthTokenDepositOrder(db.Model):
         d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
         return d
 
+    def to_dict_with_related_info(self):
+        order_obj = self.to_dict()
+        if self.review_lock_by_user_id is not None:
+            user = User.query.filter_by(id=self.review_lock_by_user_id).first()
+            if user is not None:
+                order_obj['review_lock_by_user'] = user.to_print_json()
+        if self.user_id is not None:
+            user = User.query.filter_by(id=self.user_id).first()
+            if user is not None:
+                order_obj['user'] = user.to_print_json()
+        return order_obj
+
 
 class EthTokenSweepTransaction(db.Model):
     """以太token归账流水表"""

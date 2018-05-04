@@ -116,7 +116,7 @@ def query_my_deposit_history(offset, limit, review_state, all):
     if not all:
         q = q.filter_by(review_state=review_state)
     orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
-    order_dicts = [order.to_dict() for order in orders]
+    order_dicts = [order.to_dict_with_related_info() for order in orders]
     q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
     if not all:
         q = q.filter_by(review_state=review_state)
@@ -322,18 +322,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
 
     orders = make_query(keyword).order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
     # 关联表的信息
-    order_dicts = []
-    for order in orders:
-        order_obj = order.to_dict()
-        if order.review_lock_by_user_id is not None:
-            user = User.query.filter_by(id=order.review_lock_by_user_id).first()
-            if user is not None:
-                order_obj['review_lock_by_user'] = user.to_print_json()
-        if order.user_id is not None:
-            user = User.query.filter_by(id=order.user_id).first()
-            if user is not None:
-                order_obj['user'] = user.to_print_json()
-        order_dicts.append(order_obj)
+    order_dicts = [order.to_dict_with_related_info() for order in orders]
     total = make_query(keyword).count()
     return {
         'items': order_dicts,
@@ -398,7 +387,8 @@ def get_order_info(order_id):
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
         raise error_utils.DepositOrderNotFoundError()
-    return order.to_dict()
+    order_obj = order.to_dict_with_related_info()
+    return order_obj
 
 
 @jsonrpc.method('App.processDepositOrder(order_id=int,agree=bool,memo=str,blocklink_trx_id=str,updated_at=int)')
