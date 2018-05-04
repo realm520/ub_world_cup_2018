@@ -341,7 +341,7 @@ def lock_deposit_order(order_id):
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
         raise error_utils.DepositOrderNotFoundError()
-    if order.review_state is not None:
+    if order.review_state != 1:
         raise error_utils.DepositOrderProcessedBeforeError()
     if order.review_lock_by_user_id is not None:
         raise error_utils.DepositOrderLockedError()
@@ -363,7 +363,7 @@ def unlock_deposit_order(order_id):
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
         raise error_utils.DepositOrderNotFoundError()
-    if order.review_state is not None:
+    if order.review_state != 1:
         raise error_utils.DepositOrderProcessedBeforeError()
     if order.review_lock_by_user_id is None:
         raise error_utils.OtherError("this deposit order not locked before")
@@ -404,7 +404,7 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
     order = EthTokenDepositOrder.query.filter_by(id=order_id).first()
     if order is None:
         raise error_utils.DepositOrderNotFoundError()
-    if order.review_state is not None:
+    if order.review_state != 1:
         raise error_utils.DepositOrderProcessedBeforeError()
     if updated_at is None or updated_at < time.mktime(order.updated_at.utctimetuple()):
         raise error_utils.OtherError("your order data is too old, please refresh it")
@@ -422,6 +422,7 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
         raise error_utils.BlocklinkTransactionAmountNotEnoughError()
     order.update_review_state(agree)
     order.review_message = memo
+    order.review_lock_by_user_id = None
 
     if agree:
         order.sent_blocklink_coin_admin_user_id = cur_user.id
