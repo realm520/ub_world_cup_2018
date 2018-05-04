@@ -108,8 +108,6 @@ def query_my_deposit_history(offset, limit, review_state):
         offset = 0
     if limit is None or limit < 1:
         limit = 20
-    if all is None:
-        all = True
     user_json = session['user']
     user = User.query.get(user_json['id'])
 
