@@ -46,7 +46,7 @@ def disable_jwt_token(token):
     """禁用某个jwt token"""
     key = 'disable_%s' % token
     redis_store.set(key, '1')
-    redis_store.expire(key, 60*60)
+    redis_store.expire(key, 60 * 60)
 
 
 def is_jwt_disabled(token):
@@ -99,10 +99,10 @@ def view_profile():
     return user_json
 
 
-@jsonrpc.method('App.myDepositHistory(offset=int,limit=int,review_state=bool,all=bool)')
+@jsonrpc.method('App.myDepositHistory(offset=int,limit=int,review_state=int)')
 @allow_cross_domain
 @check_auth
-def query_my_deposit_history(offset, limit, review_state, all):
+def query_my_deposit_history(offset, limit, review_state):
     """查询当前用户的充值流水"""
     if offset is None or offset < 0:
         offset = 0
@@ -112,14 +112,17 @@ def query_my_deposit_history(offset, limit, review_state, all):
         all = True
     user_json = session['user']
     user = User.query.get(user_json['id'])
-    q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
-    if not all:
-        q = q.filter_by(review_state=review_state)
+
+    def make_query(review_state):
+        q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
+        if review_state is not None:
+            q = q.filter_by(review_state=review_state)
+        return q
+
+    q = make_query(review_state)
     orders = q.order_by(EthTokenDepositOrder.created_at.desc()).offset(offset).limit(limit).all()
     order_dicts = [order.to_dict_with_related_info() for order in orders]
-    q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
-    if not all:
-        q = q.filter_by(review_state=review_state)
+    q = make_query(review_state)
     total = q.count()
     return {
         'items': order_dicts,
@@ -217,10 +220,11 @@ def query_eth_account(address):
         balances = eth_helpers.query_eth_addresses_balances_of_eth([account.address])
         token_contract_address = app.config['BLOCKLINK_ERC20_CONTRACT_ADDRESS']
         token_balances = eth_helpers.query_eth_addresses_balances_of_token([account.address], token_contract_address)
-        account_dict['eth_balance'] = str(balances.get(account.address, eth_helpers.EthAccountBalance(account.address, 0)).simple_balance)
+        account_dict['eth_balance'] = str(
+            balances.get(account.address, eth_helpers.EthAccountBalance(account.address, 0)).simple_balance)
         account_dict['token_balance'] = str(token_balances.get(account.address,
-                                                           eth_helpers.EthAccountBalance(account.address, 0,
-                                                                                         token_contract_address)).simple_balance)
+                                                               eth_helpers.EthAccountBalance(account.address, 0,
+                                                                                             token_contract_address)).simple_balance)
         return account_dict
 
 
@@ -261,10 +265,11 @@ def query_deposit_eth_accounts(offset, limit, keyword):
     for eth_account in eth_accounts:
         eth_account_dict = eth_account.to_dict()
         eth_account_dict['eth_balance'] = str(eth_balances.get(eth_account.address,
-                                                           eth_helpers.EthAccountBalance(eth_account.address, 0)).simple_balance)
+                                                               eth_helpers.EthAccountBalance(eth_account.address,
+                                                                                             0)).simple_balance)
         eth_account_dict['token_balance'] = str(token_balances.get(eth_account.address,
-                                                               eth_helpers.EthAccountBalance(eth_account.address, 0,
-                                                                                             token_contract_address)).simple_balance)
+                                                                   eth_helpers.EthAccountBalance(eth_account.address, 0,
+                                                                                                 token_contract_address)).simple_balance)
         eth_accounts_dicts.append(eth_account_dict)
     return helpers.make_paginator_response(offset, limit, total, eth_accounts_dicts)
 
@@ -279,7 +284,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
     :param user_id: 用户id
     :param offset: 0-based偏移量
     :param limit: 取的记录的数量
-    :param review_state: null/0表示不筛选，1表示审核中，2表示兑换成功，3表示拒绝请求
+    :param review_state: null表示不筛选，1表示审核中，2表示兑换成功，3表示拒绝请求
     :param amount_min: 最小金额
     :param amount_max: 最大金额
     :param min_timestamp: 发起的最小时间戳（秒数）
@@ -298,15 +303,8 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
         q = EthTokenDepositOrder.query
         if user_id is not None:
             q = q.filter_by(user_id=user_id)
-        if review_state == 1:
-            q = q.filter_by(review_state=None)
-        elif review_state == 2:
-            q = q.filter_by(review_state=True)
-        elif review_state == 3:
-            q = q.filter_by(review_state=False)
-        else:
-            if review_state != 0 and review_state is not None:
-                raise error_utils.OtherError("invalid review_state params")
+        if review_state is not None:
+            q = q.filter_by(review_state=review_state)
 
         if amount_min is not None:
             q = q.filter(EthTokenDepositOrder.simple_token_amount >= amount_min)
@@ -422,7 +420,7 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
     deposit_amount = Decimal(order.token_amount) / Decimal(10 ** order.token_precision)
     if not helpers.is_blocklink_trx_amount_valid_for_deposit(blocklink_trx_id, user.blocklink_address, deposit_amount):
         raise error_utils.BlocklinkTransactionAmountNotEnoughError()
-    order.review_state = agree
+    order.update_review_state(agree)
     order.review_message = memo
 
     if agree:
@@ -672,7 +670,8 @@ def register(email, password, blocklink_address, mobile, family_name, given_name
     user.eth_address = eth_account.address.lower()
     db.session.add(user)
     account = EthAccount(eth_account.address.lower(),
-                         eth_helpers.encrypt_eth_privatekey(helpers.safeunicode(eth_account.privateKey.hex()), encrypt_password))
+                         eth_helpers.encrypt_eth_privatekey(helpers.safeunicode(eth_account.privateKey.hex()),
+                                                            encrypt_password))
     assert eth_helpers.decrypt_eth_privatekey(account.encrypted_private_key,
                                               encrypt_password) == eth_account.privateKey.hex()
     db.session.add(account)

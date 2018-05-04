@@ -101,7 +101,7 @@ class EthTokenDepositOrder(db.Model):
     blocklink_coin_sent_trx_id = db.Column(db.String(100), nullable=True)
     sent_blocklink_coin_admin_user_id = db.Column(db.Integer, nullable=True)
     review_lock_by_user_id = db.Column(db.Integer, nullable=True)  # 被某个审核人员锁定的审核人员用户id
-    review_state = db.Column(db.Boolean, default=None, nullable=True)  # 审核状态, None: 未处理, False 审核失败, True: 审核通过
+    review_state = db.Column(db.Integer, default=1, nullable=True)  # 审核状态, 1: 未处理, 2 审核通过, 3: 审核失败
     review_message = db.Column(db.Text, nullable=True)  # 审核备注消息
     created_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
     updated_at = db.Column(db.TIMESTAMP, server_default=func.now(), nullable=False)
@@ -120,12 +120,14 @@ class EthTokenDepositOrder(db.Model):
         self.trx_receipt_status = trx_receipt_status
         self.user_id = user_id
         self.blocklink_coin_sent = False
-        self.review_state = None
         self.review_message = None
         self.simple_token_amount = simple_token_amount
 
     def __repr__(self):
         return '<EthTokenDepositOrder %d>' % self.id
+
+    def update_review_state(self, agree):
+        self.review_state = 2 if agree else 3
 
     def to_dict(self):
         d = {c.name: getattr(self, c.name, None) for c in self.__table__.columns}
@@ -176,4 +178,3 @@ class EthTokenSweepTransaction(db.Model):
         d['created_at'] = time.mktime(self.created_at.utctimetuple())
         d['updated_at'] = time.mktime(self.updated_at.utctimetuple())
         return d
-
