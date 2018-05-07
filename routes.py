@@ -573,11 +573,11 @@ def reset_password(email, new_password, verify_code, key):
     return user.to_print_json()
 
 
-@jsonrpc.method('App.updateProfile(email=str,new_password=str,blocklink_address=str,verify_code=str,key=str)')
+@jsonrpc.method('App.updateProfile(new_password=str,blocklink_address=str,verify_code=str,key=str)')
 @allow_cross_domain
 @check_auth
-def update_profile(email, new_password, blocklink_address, verify_code, key):
-    user = User.query.filter_by(email=email).first()
+def update_profile(new_password, blocklink_address, verify_code, key):
+    user = User.query.get(session['user_id'])
     if user is None:
         raise error_utils.UserNotFoundError()
     if app.config['NEED_CAPTCHA']:
@@ -585,12 +585,13 @@ def update_profile(email, new_password, blocklink_address, verify_code, key):
         if code_info is None or pickle.loads(code_info)['code'] != verify_code:
             raise error_utils.InvalidEmailVerifyCodeError()
 
-    if not helpers.check_password_format(new_password):
-        raise error_utils.PasswordFormatError()
-    if helpers.check_password(new_password, user.password):
-        raise error_utils.OtherError("can't use old password")
-    password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
-    user.password = password_crypted
+    if new_password is not None and len(new_password)>0:
+        if not helpers.check_password_format(new_password):
+            raise error_utils.PasswordFormatError()
+        if helpers.check_password(new_password, user.password):
+            raise error_utils.OtherError("can't use old password")
+        password_crypted = bcrypt.hashpw(new_password.encode('utf8'), bcrypt.gensalt())
+        user.password = password_crypted
 
     if blocklink_address is not None and len(blocklink_address) > 0:
         if not helpers.is_valid_blocklink_address(blocklink_address):
