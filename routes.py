@@ -81,6 +81,8 @@ def check_auth(f):
             raise error_utils.AuthTokenExpiredError()
         except jwt.InvalidTokenError as _:
             raise error_utils.AuthTokenInvalidError()
+        except error_utils.Error as e:
+            raise e
         except Exception as e:
             raise error_utils.OtherError(str(e))
 
