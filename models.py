@@ -142,6 +142,10 @@ class EthTokenDepositOrder(db.Model):
             user = User.query.filter_by(id=self.review_lock_by_user_id).first()
             if user is not None:
                 order_obj['review_lock_by_user'] = user.to_print_json()
+        if self.sent_blocklink_coin_admin_user_id is not None:
+            user = User.query.filter_by(id=self.sent_blocklink_coin_admin_user_id).first()
+            if user is not None:
+                order_obj['sent_blocklink_coin_admin_user'] = user.to_print_json()
         if self.user_id is not None:
             user = User.query.filter_by(id=self.user_id).first()
             if user is not None:
