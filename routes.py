@@ -115,7 +115,7 @@ def query_my_deposit_history(offset, limit, review_state):
 
     def make_query(review_state):
         q = EthTokenDepositOrder.query.filter_by(user_id=user.id)
-        if review_state is not None:
+        if review_state is not None and review_state != 0:
             q = q.filter_by(review_state=review_state)
         return q
 
@@ -303,7 +303,7 @@ def query_users_deposit_history(user_id, offset, limit, review_state, amount_min
         q = EthTokenDepositOrder.query
         if user_id is not None:
             q = q.filter_by(user_id=user_id)
-        if review_state is not None:
+        if review_state is not None and review_state != 0:
             q = q.filter_by(review_state=review_state)
 
         if amount_min is not None:
