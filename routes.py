@@ -606,7 +606,6 @@ def update_profile(email, new_password, blocklink_address, verify_code, key):
 
 @jsonrpc.method('App.logout()')
 @allow_cross_domain
-@check_auth
 def logout():
     """注销退出"""
     session['user'] = None

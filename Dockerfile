@@ -8,4 +8,3 @@ COPY ./pip.conf /etc/pip.conf
 COPY ./requirements.txt /requirements.txt
 RUN /usr/bin/pip3 install -r /requirements.txt
 RUN apt-get install -y nodejs npm redis-server
-#RUN export production=True
