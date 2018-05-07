@@ -557,6 +557,7 @@ def reset_password(email, new_password, verify_code, key):
     if app.config['NEED_CAPTCHA']:
         code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
         if code_info is None or pickle.loads(code_info)['code'] != verify_code:
+            logger.error("receive verify code: %s, required is %s" % (verify_code, pickle.loads(code_info)['code'] if code_info else ''))
             raise error_utils.InvalidEmailVerifyCodeError()
 
     if not helpers.check_password_format(new_password):
@@ -581,6 +582,7 @@ def update_profile(new_password, blocklink_address, verify_code, key):
     if app.config['NEED_CAPTCHA']:
         code_info = redis_store.get(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key)
         if code_info is None or pickle.loads(code_info)['code'] != verify_code:
+            logger.error("receive verify code: %s, required is %s" % (verify_code, pickle.loads(code_info)['code'] if code_info else ''))
             raise error_utils.InvalidEmailVerifyCodeError()
 
     if new_password is not None and len(new_password)>0:
