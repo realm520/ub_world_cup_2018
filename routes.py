@@ -501,7 +501,7 @@ def request_picture_verify_code():
         'code': code,
         'time': datetime.utcnow(),
     }))
-    redis_store.expire(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, 3 * 60)
+    redis_store.expire(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, 10 * 60)
     return {
         'img': img_base64,
         'key': key,
@@ -535,11 +535,7 @@ def verify_blocklink_address_format(address):
 def request_reset_password(email):
     if not helpers.is_valid_email_format(email):
         raise error_utils.EmailFormatError()
-    token = request.headers.get(X_TOKEN_HEADER_KEY, None)
-    if token is None or len(token) < 1:
-        key = str(uuid.uuid4())
-    else:
-        key = token
+    key = str(uuid.uuid4())
     code = helpers.generate_captcha_code(6)
     redis_store.set(EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX + key, pickle.dumps({
         'code': code,
