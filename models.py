@@ -100,6 +100,7 @@ class EthTokenDepositOrder(db.Model):
     blocklink_coin_sent = db.Column(db.Boolean, default=False, nullable=False)
     blocklink_coin_sent_trx_id = db.Column(db.String(100), nullable=True)
     sent_blocklink_coin_admin_user_id = db.Column(db.Integer, nullable=True)
+    last_review_user_id = db.Column(db.Integer, nullable=True)  # 最后审核人
     review_lock_by_user_id = db.Column(db.Integer, nullable=True)  # 被某个审核人员锁定的审核人员用户id
     review_state = db.Column(db.Integer, default=1, nullable=True)  # 审核状态, 1: 未处理, 2 审核通过, 3: 审核失败
     review_message = db.Column(db.Text, nullable=True)  # 审核备注消息
@@ -146,6 +147,10 @@ class EthTokenDepositOrder(db.Model):
             user = User.query.filter_by(id=self.sent_blocklink_coin_admin_user_id).first()
             if user is not None:
                 order_obj['sent_blocklink_coin_admin_user'] = user.to_print_json()
+        if self.last_review_user_id is not None:
+            user = User.query.filter_by(id=self.last_review_user_id).first()
+            if user is not None:
+                order_obj['last_review_user'] = user.to_print_json()
         if self.user_id is not None:
             user = User.query.filter_by(id=self.user_id).first()
             if user is not None:

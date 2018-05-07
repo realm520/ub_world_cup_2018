@@ -423,6 +423,7 @@ def process_deposit_order(order_id, agree, memo, blocklink_trx_id, updated_at):
     order.update_review_state(agree)
     order.review_message = memo
     order.review_lock_by_user_id = None
+    order.last_review_user_id = cur_user.id
 
     if agree:
         order.sent_blocklink_coin_admin_user_id = cur_user.id
