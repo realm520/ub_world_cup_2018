@@ -464,11 +464,8 @@ def request_register_email_verify_code(email, picture_code_key, picture_verify_c
         picture_code_info = redis_store.get(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + picture_code_key)
         if picture_code_info is None or pickle.loads(picture_code_info)['code'] != picture_verify_code:
             raise error_utils.InvalidPictureVerifyCodeError()
-    token = request.headers.get(X_TOKEN_HEADER_KEY, None)
-    if token is None or len(token) < 1:
-        key = str(uuid.uuid4())
-    else:
-        key = token
+    token = request.headers.get(X_TOKEN_HEADER_KEY, None)  # TODO: check too often
+    key = str(uuid.uuid4())
     code = helpers.generate_captcha_code(6)
     redis_store.set(EMAIL_VERIFY_CODE_CACHE_KEY_PREFIX + key, pickle.dumps({
         'code': code,
@@ -490,14 +487,11 @@ EMAIL_RESET_PASSWORD_CACHE_KEY_PREFIX = 'ERPVC'
 @allow_cross_domain
 def request_picture_verify_code():
     """generate picture captcha image"""
-    # TODO: check too often
     stream, code = captcha_helpers.generate_verify_image(save_img=False)
     img_base64 = base64.b64encode(stream.getvalue()).decode('utf8')
     token = request.headers.get(X_TOKEN_HEADER_KEY, None)
-    if token is None or len(token) < 1:
-        key = str(uuid.uuid4())
-    else:
-        key = token
+    # TODO: check too often
+    key = str(uuid.uuid4())
     redis_store.set(PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX + key, pickle.dumps({
         'code': code,
         'time': datetime.utcnow(),
