@@ -63,6 +63,10 @@ class DevelopmentConfig(Config):
     CELERY_RESULT_BACKEND = 'redis://%s:6379/0' % os.getenv('RHOST', 'localhost')
 
 
+class TestingConfig(DevelopmentConfig):
+    pass
+
+
 class ProductionConfig(Config):
     SMTP_HOST = 'smtpdm.aliyun.com'
     SMTP_PORT = 80
