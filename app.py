@@ -22,7 +22,7 @@ logger.info('current config model is %s' % config_model)
 app = Flask(__name__)
 app.config.from_object(config.config[config_model])
 
-#redis_store = FlaskRedis(app)
+redis_store = FlaskRedis(app)
 
 
 @cross_origin
