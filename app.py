@@ -4,7 +4,7 @@ from flask import Flask, make_response
 from flask_cors import cross_origin
 from flask_jsonrpc import JSONRPC
 from flask_sqlalchemy import SQLAlchemy
-#from flask_redis import FlaskRedis
+from flask_redis import FlaskRedis
 #from celery import Celery
 from datetime import timedelta
 import os
