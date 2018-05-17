@@ -100,7 +100,10 @@ def query_match_result(team):
 @allow_cross_domain
 def query_team_info():
     team = TTeam.query.all()
-    return list(team)
+    data = []
+    for t in team:
+        data.append(t.to_print_json())
+    return data
 
 
 # PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX = 'PVC'
