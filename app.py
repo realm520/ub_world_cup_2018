@@ -4,8 +4,8 @@ from flask import Flask, make_response
 from flask_cors import cross_origin
 from flask_jsonrpc import JSONRPC
 from flask_sqlalchemy import SQLAlchemy
-from flask_redis import FlaskRedis
-from celery import Celery
+#from flask_redis import FlaskRedis
+#from celery import Celery
 from datetime import timedelta
 import os
 import config
@@ -22,7 +22,7 @@ logger.info('current config model is %s' % config_model)
 app = Flask(__name__)
 app.config.from_object(config.config[config_model])
 
-redis_store = FlaskRedis(app)
+#redis_store = FlaskRedis(app)
 
 
 @cross_origin
@@ -38,21 +38,10 @@ def options_api():
 
 jsonrpc = JSONRPC(app, '/api', enable_web_browsable_api=True)
 
-if len(app.config['ETH_ENCRYPT_PASSWORD']) > 16:
-    raise Exception("ETH_ENCRYPT_PASSWORD too long")
-
-if app.config.get('SWEEP_TO_ETH_ADDRESS', None) is None:
-    raise Exception("SWEEP_TO_ETH_ADDRESS not found")
-
-if app.config.get('SWEEP_GAS_SPENDER_ETH_ADDRESS', None) is None:
-    raise Exception("SWEEP_GAS_SPENDER_ETH_ADDRESS not found")
-
-if app.config.get('SWEEP_GAS_SPENDER_ETH_PRIVATE_KEY', None) is None:
-    raise Exception("SWEEP_GAS_SPENDER_ETH_PRIVATE_KEY not found")
-
 db = SQLAlchemy(app)
 
 
+'''
 def make_celery(app):
     celery = Celery(app.import_name, broker=app.config['CELERY_BROKER_URL'],
                     backend=app.config['CELERY_RESULT_BACKEND'])
@@ -71,6 +60,7 @@ def make_celery(app):
 
 
 celery = make_celery(app)
+'''
 
 import routes
 

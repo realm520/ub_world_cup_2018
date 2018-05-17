@@ -53,16 +53,11 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SMTP_HOST = 'smtpdm.aliyun.com'
-    SMTP_PORT = 80
-    SMTP_SENDER = 'sender@mail.gakki.tech'
-    SMTP_LOGIN = 'sender@mail.gakki.tech'
-    SMTP_PASSWORD = 'ZSsdlh12345'
 
-    ETH_ENCRYPT_PASSWORD = '123456'
-    BLOCKLINK_ERC20_CONTRACT_ADDRESS = '0xd7cddd45629934c2f6ed3b63217bd8085d7c14a8'  # FIXME: this is AVH address for development
+    UB_ENCRYPT_PASSWORD = '123456'
+    UB_WORLD_CUP_CONTRACT_ADDRESS = '0xd7cddd45629934c2f6ed3b63217bd8085d7c14a8'  # FIXME: this is AVH address for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-                              "mysql+pymysql://root:123456@192.168.1.128:3306/blocklinkbackend_dev"
+                              "mysql+pymysql://ub:UB@018_world_cup@192.168.1.123:3306/db_world_cup"
 
     SWEEP_TO_ETH_ADDRESS = '0xb4e71a0F74a09dDf76c47234d31111DAcbe320D2'
     SWEEP_GAS_SPENDER_ETH_ADDRESS = '0xD7794474db278d458BF7142D684D2849cE93e6B4'  # 归账时需要从这个地址转一点ETH到以太充值地址作gas
