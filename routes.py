@@ -20,7 +20,7 @@ from datetime import datetime
 from sqlalchemy import or_
 from sqlalchemy.sql import func
 import captcha_helpers
-import celery_task
+# import celery_task
 from logging_config import logger
 import error_utils
 
