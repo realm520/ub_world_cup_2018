@@ -89,7 +89,7 @@ def query_stake_stat(stat_type, stake_type=None, limit=20):
 
     data = []
     for s in stakes:
-        data.append({"address": s[0], "count": s[1]})
+        data.append({"address": s[0], "count": str(s[1])})
     return data
 
 
