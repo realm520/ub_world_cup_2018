@@ -48,13 +48,15 @@ def query_stake_history(address, limit=20, state=0):
     if limit is None or limit < 1:
         limit = 20
     stakes = TStake.query.filter(TStake.address==address, TStake.state==state).limit(limit)
+    data = []
+    for s in stakes:
+        data.append(s.to_print_json())
+    return data
 
-    return list(stakes)
 
-
-@jsonrpc.method('App.queryStakeStat(stake_type=int,stat_type=int,limit=int)')
+@jsonrpc.method('App.queryStakeStat(stat_type=int,stake_type=int,limit=int)')
 @allow_cross_domain
-def query_stake_stat(stake_type, stat_type, limit=20):
+def query_stake_stat(stat_type, stake_type=None, limit=20):
     """query total stake statistics"""
     if stat_type is None or not isinstance(stat_type, int):
         raise InvalidParamsError()

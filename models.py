@@ -12,8 +12,8 @@ class TTeam(db.Model):
     name = db.Column(db.String(45), unique=True)
     name_en = db.Column(db.String(45), nullable=False)
     group = db.Column(db.String(1), nullable=True)
-    point = db.Column(db.Integer, nullable=False)
-    rank = db.Column(db.Integer, nullable=False)
+    point = db.Column(db.Integer, nullable=False, default=0)
+    rank = db.Column(db.Integer, nullable=False, default=9)
 
     def __init__(self, id, name, name_en, group, point, rank):
         self.id = id
@@ -44,7 +44,7 @@ class TSchedule(db.Model):
     team_a = db.Column(db.Integer, nullable=False)
     team_b = db.Column(db.Integer, nullable=False)
     city = db.Column(db.String(45), nullable=False)
-    result = db.Column(db.Integer, nullable=False)
+    result = db.Column(db.Integer, nullable=False, default=-1)
 
     def __init__(self, id, start_time, team_a, team_b, city, result):
         self.id = id
@@ -77,8 +77,8 @@ class TStake(db.Model):
     time = db.Column(db.DateTime, nullable=False)
     type = db.Column(db.Integer, nullable=True)
     item = db.Column(db.Integer, nullable=True)
-    state = db.Column(db.Integer, nullable=True)
-    txid = db.Column(db.String(128), nullable=False)
+    state = db.Column(db.Integer, nullable=True, default=0)
+    txid = db.Column(db.String(128), nullable=False, default='')
 
     def __init__(self, address, count, time, type, item, state, txid):
         self.address = address
