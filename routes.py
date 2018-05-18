@@ -93,10 +93,10 @@ def query_stake_stat(stat_type, stake_type=None, limit=20):
     return data
 
 
-@jsonrpc.method('App.queryMatchResult(team=str)')
+@jsonrpc.method('App.queryMatchResult(team=int)')
 @allow_cross_domain
 def query_match_result(team=None):
-    if team is None or not isinstance(team, str):
+    if team is None or not isinstance(team, int):
         match = TSchedule.query.all()
     else:
         match = TSchedule.query.filter(or_(TSchedule.team_a==team, TSchedule.team_b==team))
