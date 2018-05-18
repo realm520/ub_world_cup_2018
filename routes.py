@@ -99,10 +99,13 @@ def query_match_result(team):
     return data
 
 
-@jsonrpc.method('App.queryTeamInfo()')
+@jsonrpc.method('App.queryTeamInfo(group=str)')
 @allow_cross_domain
-def query_team_info():
-    team = TTeam.query.all()
+def query_team_info(group):
+    if group is None or not isinstance(group, str) or len(group) > 1:
+        team = TTeam.query.all()
+    else:
+        team = TTeam.query.filter(TTeam.group == group)
     data = []
     for t in team:
         data.append(t.to_print_json())
