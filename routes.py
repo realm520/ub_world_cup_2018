@@ -54,7 +54,7 @@ def query_stake_history(address, limit=20, state=0):
 
 @jsonrpc.method('App.queryStakeStat(stake_type=int,stat_type=int,limit=int)')
 @allow_cross_domain
-def query_stake_history(stake_type, stat_type, limit=20):
+def query_stake_stat(stake_type, stat_type, limit=20):
     """query total stake statistics"""
     if stat_type is None or not isinstance(stat_type, int):
         raise InvalidParamsError()
@@ -105,7 +105,7 @@ def query_match_result(team):
 
 @jsonrpc.method('App.queryTeamInfo(group=str)')
 @allow_cross_domain
-def query_team_info(group):
+def query_team_info(group=1):
     if group is None or not isinstance(group, str) or len(group) > 1:
         team = TTeam.query.all()
     else:
