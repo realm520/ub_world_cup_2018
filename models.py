@@ -92,7 +92,7 @@ class TStake(db.Model):
     def __repr__(self):
         return '<Stake %d>' % self.id
 
-    def to_dict(self):
+    def to_print_json(self):
         return {
             'id': self.id,
             'address': self.address,

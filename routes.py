@@ -39,12 +39,9 @@ def hello_world():
     return 'Hello World!'
 
 
-X_TOKEN_HEADER_KEY = 'X-TOKEN'
-
-
 @jsonrpc.method('App.queryStakeHistory(address=str,limit=int,state=int)')
 @allow_cross_domain
-def query_stake_history(address, limit, state):
+def query_stake_history(address, limit=20, state=0):
     """query stake history of one address"""
     if address is None or not isinstance(address, str):
         raise InvalidParamsError()
@@ -55,9 +52,9 @@ def query_stake_history(address, limit, state):
     return list(stakes)
 
 
-@jsonrpc.method('App.queryStakeStat(stat_type=int,limit=int)')
+@jsonrpc.method('App.queryStakeStat(stake_type=int,stat_type=int,limit=int)')
 @allow_cross_domain
-def query_stake_history(stake_type, stat_type, limit):
+def query_stake_history(stake_type, stat_type, limit=20):
     """query total stake statistics"""
     if stat_type is None or not isinstance(stat_type, int):
         raise InvalidParamsError()
@@ -73,17 +70,24 @@ def query_stake_history(stake_type, stat_type, limit):
                 filter(TStake.type == stake_type).group_by(TStake.address).\
                 order_by('address_count').limit(limit)
     elif stat_type == 2:
-        # stat by favourite team
+        # stat by champion team
         stakes = TStake.query(TStake.item, func.sum(TStake.count).label('team_count')).\
-            filter(TStake.type == 4).group_by(TStake.item).\
+            filter(TStake.type == 2).group_by(TStake.item).\
             order_by('team_count').limit(limit)
-    elif stat_type == 2:
+    elif stat_type == 3:
         # stat by scores
         stakes = TStake.query(TStake.item, func.sum(TStake.count).label('score_count')).\
             filter(TStake.type == 3).group_by(TStake.item).\
             order_by('score_count').limit(limit)
+    elif stat_type == 4:
+        # stat by favourite team
+        stakes = TStake.query(TStake.item, func.sum(TStake.count).label('team_count')).\
+            filter(TStake.type == 4).group_by(TStake.item).\
+            order_by('team_count').limit(limit)
 
-    return list(stakes)
+    data = []
+    for s in stakes:
+        data.append(s.to_print_json())
 
 
 @jsonrpc.method('App.queryMatchResult(team=str)')
