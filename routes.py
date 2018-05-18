@@ -89,13 +89,13 @@ def query_stake_stat(stat_type, stake_type=None, limit=20):
 
     data = []
     for s in stakes:
-        data.append({"address": s[0], "count": str(s[1])})
+        data.append({"address": s[0], "count": int(s[1])})
     return data
 
 
 @jsonrpc.method('App.queryMatchResult(team=str)')
 @allow_cross_domain
-def query_match_result(team):
+def query_match_result(team=None):
     if team is None or not isinstance(team, str):
         match = TSchedule.query.all()
     else:
