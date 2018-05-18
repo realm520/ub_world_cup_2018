@@ -61,7 +61,7 @@ class TSchedule(db.Model):
     def to_print_json(self):
         return {
             'id': self.id,
-            'start_time': self.start_time,
+            'start_time': time.strftime("%Y-%m-%d %H:%M:%S", self.start_time.utctimetuple()),
             'team_a': self.team_a,
             'team_b': self.team_b,
             'city': self.city,
@@ -96,7 +96,7 @@ class TStake(db.Model):
         return {
             'id': self.id,
             'address': self.address,
-            'time': self.time,
+            'time': time.strftime("%Y-%m-%d %H:%M:%S", self.time.utctimetuple()),
             'type': self.type,
             'item': self.item,
             'state': self.state,
