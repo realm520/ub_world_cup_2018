@@ -63,31 +63,32 @@ def query_stake_stat(stake_type, stat_type, limit=20):
     if stat_type == 1:
         # stat by address and/or type
         if stake_type is None or not isinstance(stake_type, int):
-            stakes = TStake.query(TStake.address, func.sum(TStake.count).label('address_count')). \
+            stakes = db.session.query(TStake.address, func.sum(TStake.count).label('address_count')). \
                 group_by(TStake.address).order_by('address_count').limit(limit)
         else:
-            stakes = TStake.query(TStake.address, func.sum(TStake.count).label('address_count')).\
+            stakes = db.session.query(TStake.address, func.sum(TStake.count).label('address_count')).\
                 filter(TStake.type == stake_type).group_by(TStake.address).\
                 order_by('address_count').limit(limit)
     elif stat_type == 2:
         # stat by champion team
-        stakes = TStake.query(TStake.item, func.sum(TStake.count).label('team_count')).\
+        stakes = db.session.query(TStake.item, func.sum(TStake.count).label('team_count')).\
             filter(TStake.type == 2).group_by(TStake.item).\
             order_by('team_count').limit(limit)
     elif stat_type == 3:
         # stat by scores
-        stakes = TStake.query(TStake.item, func.sum(TStake.count).label('score_count')).\
+        stakes = db.session.query(TStake.item, func.sum(TStake.count).label('score_count')).\
             filter(TStake.type == 3).group_by(TStake.item).\
             order_by('score_count').limit(limit)
     elif stat_type == 4:
         # stat by favourite team
-        stakes = TStake.query(TStake.item, func.sum(TStake.count).label('team_count')).\
+        stakes = db.session.query(TStake.item, func.sum(TStake.count).label('team_count')).\
             filter(TStake.type == 4).group_by(TStake.item).\
             order_by('team_count').limit(limit)
 
     data = []
     for s in stakes:
         data.append(s.to_print_json())
+    return data
 
 
 @jsonrpc.method('App.queryMatchResult(team=str)')
