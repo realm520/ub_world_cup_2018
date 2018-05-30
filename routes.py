@@ -120,9 +120,9 @@ def query_team_info(group=1):
 @jsonrpc.method('App.queryStakeMemo(stake_type=int, stake_item=int)')
 @allow_cross_domain
 def query_stake_memo(stake_type, stake_item):
-    if stake_type != 4 or stake_item < 1 or stake_item > 32:
+    if stake_type != 2 or stake_item < 1 or stake_item > 32:
         raise InvalidParamsError()
-    str_memo = "4:" + str(stake_item)
+    str_memo = "2:" + str(stake_item)
     return bytes.decode(base64.b64encode(str.encode(str_memo)))
 
 # PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX = 'PVC'
