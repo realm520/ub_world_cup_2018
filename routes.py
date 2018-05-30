@@ -123,7 +123,7 @@ def query_stake_memo(stake_type, stake_item):
     if stake_type != 4 or stake_item < 1 or stake_item > 32:
         raise InvalidParamsError()
     str_memo = "4:" + str(stake_item)
-    return base64.b64encode(str_memo)
+    return bytes.decode(base64.b64encode(str.encode(str_memo)))
 
 # PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX = 'PVC'
 #
