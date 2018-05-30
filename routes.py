@@ -4,12 +4,10 @@ from flask import request
 from flask_cors import CORS, cross_origin
 from app import app, db, jsonrpc, redis_store
 from models import TTeam, TSchedule, TStake
-import bcrypt
+import base64
 import helpers
 import uuid
-import base64
 import json
-import pickle
 import time
 # import jwt
 from flask_jsonrpc.exceptions import InvalidParamsError
@@ -36,7 +34,7 @@ def teardown_request(exception):
 
 @app.route('/')
 def hello_world():
-    return 'Hello World!'
+    return 'Hello World Cup 2018!'
 
 
 @jsonrpc.method('App.queryStakeHistory(address=str,limit=int,state=int)')
@@ -118,6 +116,14 @@ def query_team_info(group=1):
         data.append(t.to_print_json())
     return data
 
+
+@jsonrpc.method('App.queryStakeMemo(stake_type=int, stake_item=int)')
+@allow_cross_domain
+def query_stake_memo(stake_type, stake_item):
+    if stake_type != 4 or stake_item < 1 or stake_item > 32:
+        raise InvalidParamsError()
+    str_memo = "4:" + str(stake_item)
+    return base64.b64encode(str_memo)
 
 # PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX = 'PVC'
 #
