@@ -69,25 +69,29 @@ def query_stake_stat(stat_type, stake_type=None, limit=20):
             stakes = db.session.query(TStake.address, func.sum(TStake.count).label('address_count')).\
                 filter(TStake.type == stake_type).group_by(TStake.address).\
                 order_by('address_count desc').limit(limit)
+        item_name = "address"
     elif stat_type == 2:
         # stat by champion team
         stakes = db.session.query(TStake.item, func.sum(TStake.count).label('team_count')).\
             filter(TStake.type == 2).group_by(TStake.item).\
             order_by('team_count desc').limit(limit)
+        item_name = "champion"
     elif stat_type == 3:
         # stat by scores
         stakes = db.session.query(TStake.item, func.sum(TStake.count).label('score_count')).\
             filter(TStake.type == 3).group_by(TStake.item).\
             order_by('score_count desc').limit(limit)
+        item_name = "score"
     elif stat_type == 4:
         # stat by favourite team
         stakes = db.session.query(TStake.item, func.sum(TStake.count).label('team_count')).\
             filter(TStake.type == 4).group_by(TStake.item).\
             order_by('team_count desc').limit(limit)
+        item_name = "team"
 
     data = []
     for s in stakes:
-        data.append({"address": s[0], "count": int(s[1])})
+        data.append({item_name: s[0], "count": int(s[1])})
     return data
 
 
