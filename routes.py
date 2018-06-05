@@ -37,19 +37,34 @@ def hello_world():
     return 'Hello World Cup 2018!'
 
 
-@jsonrpc.method('App.queryStakeHistory(address=str,limit=int,state=int)')
+@jsonrpc.method('App.queryStakeHistory(address=str,state=int)')
 @allow_cross_domain
-def query_stake_history(address, limit=20, state=0):
+def query_stake_history(address, state=-1):
     """query stake history of one address"""
     if address is None or not isinstance(address, str):
         raise InvalidParamsError()
-    if limit is None or limit < 1:
-        limit = 20
-    stakes = TStake.query.filter(TStake.address==address, TStake.state==state).limit(limit)
-    data = []
+    if state == -1:
+        stakes = TStake.query.filter(TStake.address == address)
+    else:
+        stakes = TStake.query.filter(TStake.address==address, TStake.state==state)
+    details = []
+    total_bingo_stakes = 1000
+    user_stakes = 0
+    user_bingo_stakes = 0
     for s in stakes:
-        data.append(s.to_print_json())
-    return data
+        record = {'address': s.address, 'item': s.item, 'state': s.state,
+                  'time': time.strftime("%Y-%m-%d %H:%M:%S", s.time.utctimetuple())}
+        if s.state == 1:
+            user_bingo_stakes += s.count
+            record['money'] = s.count * 100 / total_bingo_stakes
+        else:
+            record['money'] = 0
+        user_stakes += s.count
+        record['awards'] = s.count
+        record['txid'] = s.txid
+        details.append(record)
+    return {'deposit': int(user_stakes * 0.1), 'allawards': user_bingo_stakes * 100 / total_bingo_stakes,
+            'details': details }
 
 
 @jsonrpc.method('App.queryStakeStat(stat_type=int,stake_type=int,limit=int)')
@@ -126,7 +141,7 @@ def query_team_info(group=1):
 def query_stake_memo(stake_type, stake_item):
     if stake_type != 2 or stake_item < 1 or stake_item > 32:
         raise InvalidParamsError()
-    str_memo = "2:" + str(stake_item)
+    str_memo = str(stake_item) + ":2"
     return bytes.decode(base64.b64encode(str.encode(str_memo)))
 
 # PICTURE_VERIFY_CODE_CACHE_KEY_PREFIX = 'PVC'
