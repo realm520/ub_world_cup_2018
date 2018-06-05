@@ -37,17 +37,15 @@ def hello_world():
     return 'Hello World Cup 2018!'
 
 
-@jsonrpc.method('App.queryStakeHistory(address=str,state=int)')
+@jsonrpc.method('App.queryStakeHistory(address=str)')
 @allow_cross_domain
-def query_stake_history(address, state=-1):
+def query_stake_history(address):
     """query stake history of one address"""
     if address is None or not isinstance(address, str):
         raise InvalidParamsError()
-    if state == -1:
-        stakes = TStake.query.filter(TStake.address == address)
-    else:
-        stakes = TStake.query.filter(TStake.address==address, TStake.state==state)
+    stakes = TStake.query.filter(TStake.address == address)
     details = []
+    #TODO, total bingo stakes need be updated.
     total_bingo_stakes = 1000
     user_stakes = 0
     user_bingo_stakes = 0
