@@ -1,6 +1,6 @@
 # coding: utf8
 from __future__ import print_function
-from flask import request, send_from_directory
+from flask import request
 from flask_cors import CORS, cross_origin
 from app import app, db, jsonrpc, redis_store
 from models import TTeam, TSchedule, TStake
@@ -30,18 +30,6 @@ def teardown_request(exception):
     if exception:
         db.session.rollback()
     db.session.remove()
-
-
-@app.route('/')
-def hello_world():
-    return 'Hello World Cup 2018!'
-
-
-static_dir = os.path.join(os.path.dirname(__file__), 'dist')
-
-@app.route('/world_cup/<path>')
-def dist_static_file(path):
-    return send_from_directory(static_dir, path)
 
 
 @jsonrpc.method('App.queryStakeHistory(address=str)')

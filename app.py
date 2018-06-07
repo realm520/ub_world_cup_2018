@@ -1,6 +1,6 @@
 #!/bin/env python3
 from __future__ import print_function
-from flask import Flask, make_response
+from flask import Flask, make_response, send_from_directory
 from flask_cors import cross_origin
 from flask_jsonrpc import JSONRPC
 from flask_sqlalchemy import SQLAlchemy
@@ -23,6 +23,18 @@ app = Flask(__name__)
 app.config.from_object(config.config[config_model])
 
 redis_store = FlaskRedis(app)
+
+
+@app.route('/')
+def hello_world():
+    return 'Hello World Cup 2018!'
+
+
+static_dir = os.path.join(os.path.dirname(__file__), 'dist')
+
+@app.route('/world_cup/<path>')
+def dist_static_file(path):
+    return send_from_directory(static_dir, path)
 
 
 @cross_origin
