@@ -12,8 +12,8 @@ connection = pymysql.connect(host='192.168.1.123', port=3306, user='ub', passwor
 g_stake_address = [
     '18QQJNannotKo2Q9CkiqBJcf4qZWANZvGM',
     '16JUBxCKb5LsQP7pZANc2yWpqvv4Xxqpw5',
-    # '17ThubQK723mnUAhJyQ5g3y7WGExMu5X1d',
-    '1BdR8SFVB67JbLdbtJBagN4oFGvUGYqUjh',
+    '17ThubQK723mnUAhJyQ5g3y7WGExMu5X1d',
+    # '1BdR8SFVB67JbLdbtJBagN4oFGvUGYqUjh',
     '1EvSWArvHhg2LxDBBSqDmyabqKpJXh2dVW',
     '1Kn4scG7XnyHkWS8JXBEnHv1rHZuatKK1r',
     '141fdMZPSXyx1Ym73Tf7f5PgLrw4sTaRcG',
@@ -74,7 +74,7 @@ class StateManager(object):
         f = os.open(self.id_file, os.O_WRONLY | os.O_TRUNC | os.O_CREAT)
         os.write(f, self.latest_id.encode('ascii'))
         os.close(f)
-        print('__del__ | ' + self.latest_id)
+        print(self.latest_id)
 
     def __del__(self):
         self.save_latest_id()
@@ -111,8 +111,8 @@ def get_latest_transaction(last_id, address, item):
     ''' % (address, int(last_id))
     query_headers = {'Content-Type': "application/json"}
     # print(query_trans_request)
-    # response = requests.post('https://www.anybit.io/server/process/', data=query_trans_request, headers=query_headers)
-    response = requests.post('http://192.168.1.220:8080/lightwallet/server/process', data=query_trans_request, headers=query_headers)
+    response = requests.post('https://www.anybit.io/server/process/', data=query_trans_request, headers=query_headers)
+    # response = requests.post('http://192.168.1.220:8080/lightwallet/server/process', data=query_trans_request, headers=query_headers)
     # print(response.text)
 
     records = json.loads(response.text)['data']['trans']
@@ -136,8 +136,8 @@ def get_latest_transaction(last_id, address, item):
 
 if __name__ == '__main__':
     sm = StateManager()
-    item = 1
     while True:
+        item = 1
         for a in g_stake_address:
             last_id = get_latest_transaction(sm.get_last_id(), a, item)
             item += 1
