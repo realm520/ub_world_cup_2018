@@ -36,13 +36,14 @@ def teardown_request(exception):
 @allow_cross_domain
 def query_stake_history(address):
     """query stake history of one address"""
+    db.session.commit()
     if address is None or not isinstance(address, str):
         raise InvalidParamsError()
     stakes = TStake.query.filter(TStake.address == address)
     details = []
     #TODO, total bingo stakes need be updated.
     total_bingo_stakes = 1000
-    user_stakes = 0
+    user_deposit = 0.0
     user_bingo_stakes = 0
     for s in stakes:
         record = {'address': s.address, 'item': s.item, 'state': s.state,
@@ -52,12 +53,17 @@ def query_stake_history(address):
             record['money'] = s.count * 100 / total_bingo_stakes
         else:
             record['money'] = 0
-        user_stakes += s.count
+        if s.isAnybit == 0:
+            record['deposit'] = round(float(s.count) / 10, 2)
+        elif s.isAnybit == 1:
+            record['deposit'] = round(float(s.count * 8 / 100), 2)
+        user_deposit += record['deposit']
         record['awards'] = s.count
         record['txid'] = s.txid
         details.append(record)
-    return {'deposit': int(user_stakes * 0.1), 'allawards': user_bingo_stakes * 100 / total_bingo_stakes,
+    return {'deposit': round(user_deposit, 2), 'allawards': round(user_bingo_stakes * 100 / total_bingo_stakes, 2),
             'details': details }
+
 
 
 @jsonrpc.method('App.queryStakeStat(stat_type=int,stake_type=int,limit=int)')
