@@ -79,8 +79,9 @@ class TStake(db.Model):
     item = db.Column(db.Integer, nullable=True)
     state = db.Column(db.Integer, nullable=True, default=0)
     txid = db.Column(db.String(128), nullable=False, default='')
+    isAnybit = db.Column(db.Integer, nullable=True, default=0)
 
-    def __init__(self, address, count, time, type, item, state, txid):
+    def __init__(self, address, count, time, type, item, state, txid, isAnybit):
         self.address = address
         self.count = count
         self.time = time
@@ -88,6 +89,7 @@ class TStake(db.Model):
         self.item = item
         self.state = state
         self.txid = txid
+        self.isAnybit = isAnybit
 
     def __repr__(self):
         return '<Stake %d>' % self.id
@@ -101,4 +103,5 @@ class TStake(db.Model):
             'item': self.item,
             'state': self.state,
             'txid': self.txid,
+            'isAnybit': self.isAnybit
         }
