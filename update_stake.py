@@ -7,7 +7,7 @@ import time
 import pymysql.cursors
 
 
-connection = pymysql.connect(host='192.168.1.123', port=3306, user='ub', password='UB@018_world_cup', db='db_world_cup',
+connection = pymysql.connect(host='127.0.0.1', port=3306, user='ub', password='UB@018_world_cup', db='db_world_cup',
                              charset='utf8mb4', cursorclass=pymysql.cursors.DictCursor)
 g_stake_address = [
     '18QQJNannotKo2Q9CkiqBJcf4qZWANZvGM',
@@ -80,10 +80,10 @@ class StateManager(object):
         self.save_latest_id()
 
 
-def update_database(address, count, time, item):
+def update_database(address, count, time, item, isAnybit):
     cursor = connection.cursor()
-    sql = "INSERT INTO `t_stake` (`address`, `count`, `time`, `type`, `item`, `txid`) VALUES ('%s', %d, '%s', 2, %d, '') ON DUPLICATE KEY UPDATE count=VALUES(count)" % \
-          (address, count, time, item)
+    sql = "INSERT INTO `t_stake` (`address`, `count`, `time`, `type`, `item`, `txid`, `isAnybit`) VALUES ('%s', %d, '%s', 2, %d, '', %d) ON DUPLICATE KEY UPDATE count=VALUES(count)" % \
+          (address, count, time, item, isAnybit)
     cursor.execute(sql)
     connection.commit()
 
@@ -123,14 +123,16 @@ def get_latest_transaction(last_id, address, item):
             latest_id = r['id']
         if 'source' in r and r['source'] == 1:
             count = int(float(r['tranAmt']) * 10 * 5 / 4)
+            isAnybit = 1
         else:
             count = int(float(r['tranAmt']) * 10)
+            isAnybit = 0
         if count <= 0:
             continue
         ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(r['createTime'] / 1000))
         # item = g_stake_address.index(r['targetAddr'])
         print(r['targetAddr'], count, ctime, item)
-        update_database(r['targetAddr'], count, ctime, item)
+        update_database(r['targetAddr'], count, ctime, item, isAnybit)
     return latest_id
 
 
