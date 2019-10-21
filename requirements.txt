@@ -74,5 +74,5 @@ virtualenv==15.2.0
 watchdog==0.8.3
 web3==4.1.0
 websockets==4.0.1
-Werkzeug==0.14.1
+Werkzeug==0.15.3
 when-changed==0.3.0
