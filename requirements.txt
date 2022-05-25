@@ -50,7 +50,7 @@ pluggy==0.6.0
 py==1.5.3
 pycparser==2.18
 pycryptodome==3.6.1
-PyJWT==1.6.1
+PyJWT==2.4.0
 PyMySQL==0.8.0
 pytest==3.2.5
 pytest-forked==0.2
